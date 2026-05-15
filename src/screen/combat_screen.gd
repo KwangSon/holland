@@ -75,13 +75,21 @@ func _setup_combat() -> void:
 			if (row[x] as int) != EMPTY_TILE:
 				valid_cells.append(Vector2i(x, y))
 
+	var encounter: Dictionary = SaveManager.rna.get("encounter", {})
 	_state = CombatState.new()
 	_state.start_encounter(
-		UnitRegistry.player_units(),
-		UnitRegistry.enemy_units(),
+		_units_from_rna(SaveManager.rna.get("party", [])),
+		_units_from_rna(encounter.get("enemies", [])),
 		valid_cells,
-		UnitRegistry.test_board_seed()
+		encounter.get("seed", 0)
 	)
+
+
+func _units_from_rna(entries: Array) -> Array[CombatUnit]:
+	var result: Array[CombatUnit] = []
+	for entry: Dictionary in entries:
+		result.append(CombatUnit.create(entry))
+	return result
 
 
 ## Overlay layers are added AFTER the tile layer so they draw on top.
