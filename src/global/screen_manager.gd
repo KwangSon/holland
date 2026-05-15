@@ -101,12 +101,10 @@ func _create_combat_screen() -> Node:
 # 	screen.name = "CutsceneScreen"
 # 	return screen
 
-
 # func _create_game_over_screen() -> Node:
 # 	var screen = (preload("res://src/screen/game_over_screen.gd") as GDScript).new()
 # 	screen.name = "GameOverScreen"
 # 	return screen
-
 
 # ============================================================
 # 정리
