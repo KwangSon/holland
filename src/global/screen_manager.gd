@@ -10,8 +10,7 @@ enum Screen {
 	NONE,
 	SPLASH,
 	TITLE,
-	# EXPLORATION,
-	# COMBAT,
+	COMBAT,
 	# CUTSCENE,
 	# GAME_OVER,
 }
@@ -67,10 +66,8 @@ func _create_screen(target: Screen) -> Node:
 			screen = _create_splash_screen()
 		Screen.TITLE:
 			screen = _create_title_screen()
-		# Screen.EXPLORATION:
-		# 	screen = _create_exploration_screen()
-		# Screen.COMBAT:
-		# 	screen = _create_combat_screen()
+		Screen.COMBAT:
+			screen = _create_combat_screen()
 		# Screen.CUTSCENE:
 		# 	screen = _create_cutscene_screen()
 		# Screen.GAME_OVER:
@@ -93,16 +90,10 @@ func _create_title_screen() -> Node:
 	return screen
 
 
-# func _create_exploration_screen() -> Node:
-# 	var screen = (preload("res://src/screen/exploration_screen.gd") as GDScript).new()
-# 	screen.name = "ExplorationScreen"
-# 	return screen
-
-
-# func _create_combat_screen() -> Node:
-# 	var screen = (preload("res://src/screen/combat_screen.gd") as GDScript).new()
-# 	screen.name = "CombatScreen"
-# 	return screen
+func _create_combat_screen() -> Node:
+	var screen = (preload("res://src/screen/combat_screen.gd") as GDScript).new()
+	screen.name = "CombatScreen"
+	return screen
 
 
 # func _create_cutscene_screen() -> Node:
