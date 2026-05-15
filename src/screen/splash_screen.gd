@@ -1,7 +1,5 @@
 class_name SplashScreen extends Node2D
 
-signal splash_completed
-
 var _timer: Timer
 
 
@@ -23,7 +21,7 @@ func _setup_ui() -> void:
 	canvas.add_child(center)
 
 	var label := Label.new()
-	label.text = "JTE: Journey To East\n\n(Splash Screen)"
+	label.text = "holland\n\n(Splash Screen)"
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	center.add_child(label)
 
@@ -39,4 +37,4 @@ func _start_splash() -> void:
 
 
 func _on_timeout() -> void:
-	splash_completed.emit()
+	ScreenManager.change_screen(ScreenManager.Screen.TITLE)
