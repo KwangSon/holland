@@ -121,7 +121,7 @@ func _add_spacer(parent: VBoxContainer, height: int) -> void:
 
 
 func _on_new_campaign_pressed() -> void:
-	ScreenManager.change_screen(ScreenManager.Screen.COMBAT)
+	ScreenManager.change_screen(ScreenManager.Screen.EXPLORE)
 
 
 func _on_load_campaign_pressed() -> void:
