@@ -2,11 +2,11 @@ class_name CombatScreen extends Node2D
 
 enum InputPhase { IDLE, UNIT_SELECTED }
 
-const TILE_SET := preload("res://asset/new_tile_set.tres")
-const SOURCE_ID := 1
+const TILE_SET := preload("res://asset/hex_tile.tres")
+const SOURCE_ID := 0
 const EMPTY_TILE := -1
 const MAP_ORIGIN := Vector2(96, 72)
-## Drawing radius for hex highlights (slightly smaller than tile half-height).
+## Drawing radius for hex highlights (between tile inradius 12 and circumradius 16).
 const HEX_RADIUS := 14.0
 
 const TEST_MAP := [
@@ -260,7 +260,7 @@ func _draw_hex(layer: Node2D, cell: Vector2i, color: Color) -> void:
 	var center := _cell_to_local(cell)
 	var pts := PackedVector2Array()
 	for i: int in 6:
-		var angle := deg_to_rad(60.0 * i - 30.0)
+		var angle := deg_to_rad(60.0 * i)
 		pts.append(center + Vector2(HEX_RADIUS * cos(angle), HEX_RADIUS * sin(angle)))
 	layer.draw_polygon(pts, PackedColorArray([color]))
 

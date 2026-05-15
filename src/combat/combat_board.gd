@@ -23,27 +23,28 @@ func is_passable(cell: Vector2i) -> bool:
 	return _valid.has(cell) and not occupied.has(cell)
 
 
-## Returns all valid neighboring cells using odd-r offset coordinates
-## (pointy-top hexagons, odd rows shifted right — matches Godot's default hex TileMapLayer).
+## Returns all valid neighboring cells using odd-q offset coordinates
+## (flat-top hexagons, odd columns shifted down — matches Godot's hex TileMapLayer
+## with TILE_OFFSET_AXIS_VERTICAL / TILE_LAYOUT_DIAMOND_DOWN).
 func get_neighbors(cell: Vector2i) -> Array[Vector2i]:
 	var offsets: Array[Vector2i]
-	if cell.y % 2 == 0:
+	if cell.x % 2 == 0:
 		offsets = [
-			Vector2i(-1, -1),
 			Vector2i(0, -1),
-			Vector2i(-1, 0),
+			Vector2i(1, -1),
 			Vector2i(1, 0),
-			Vector2i(-1, 1),
 			Vector2i(0, 1),
+			Vector2i(-1, 0),
+			Vector2i(-1, -1),
 		]
 	else:
 		offsets = [
 			Vector2i(0, -1),
-			Vector2i(1, -1),
-			Vector2i(-1, 0),
 			Vector2i(1, 0),
-			Vector2i(0, 1),
 			Vector2i(1, 1),
+			Vector2i(0, 1),
+			Vector2i(-1, 1),
+			Vector2i(-1, 0),
 		]
 	var result: Array[Vector2i] = []
 	for offset: Vector2i in offsets:
@@ -94,9 +95,9 @@ func clear_occupied(cell: Vector2i) -> void:
 	occupied.erase(cell)
 
 
-## odd-r offset → cube coordinates. Required for correct hex_distance.
+## odd-q offset → cube coordinates. Required for correct hex_distance.
 func _to_cube(cell: Vector2i) -> Vector3i:
-	var offset: int = (cell.y - (cell.y & 1)) >> 1
-	var q: int = cell.x - offset
-	var r: int = cell.y
+	var offset: int = (cell.x - (cell.x & 1)) >> 1
+	var q: int = cell.x
+	var r: int = cell.y - offset
 	return Vector3i(q, r, -q - r)
