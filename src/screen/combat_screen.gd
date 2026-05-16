@@ -28,8 +28,18 @@ var _state: CombatState
 var _phase: InputPhase = InputPhase.IDLE
 var _selected_id: String = ""
 
-var _turn_label: Label
+var _round_label: Label
+var _ally_label: Label
+var _enemy_label: Label
+var _bottom_panel: MarginContainer
+var _unit_name_label: Label
+var _unit_stats_label: Label
 var _log_label: Label
+var _queue_container: HBoxContainer
+var _end_round_btn: Button
+var _wait_turn_btn: Button
+var _end_turn_btn: Button
+var _menu_popup: HudMenuPopup
 
 
 func _ready() -> void:
@@ -108,44 +118,112 @@ func _setup_overlay_layers() -> void:
 func _setup_ui() -> void:
 	var canvas := CanvasLayer.new()
 	add_child(canvas)
+	_build_top_bar(canvas)
+	_build_bottom_panel(canvas)
+	_build_menu_popup(canvas)
+	_refresh_ui()
 
-	var top := MarginContainer.new()
-	top.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	top.add_theme_constant_override("margin_left", 12)
-	top.add_theme_constant_override("margin_top", 12)
-	canvas.add_child(top)
 
-	var top_vbox := VBoxContainer.new()
-	top_vbox.add_theme_constant_override("separation", 4)
-	top.add_child(top_vbox)
-
-	_turn_label = Label.new()
-	top_vbox.add_child(_turn_label)
-
-	_log_label = Label.new()
-	top_vbox.add_child(_log_label)
-
-	var bottom := MarginContainer.new()
-	bottom.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	bottom.add_theme_constant_override("margin_left", 12)
-	bottom.add_theme_constant_override("margin_bottom", 12)
-	canvas.add_child(bottom)
+func _build_top_bar(canvas: CanvasLayer) -> void:
+	var bar := MarginContainer.new()
+	bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	bar.add_theme_constant_override("margin_top", 8)
+	bar.add_theme_constant_override("margin_left", 12)
+	bar.add_theme_constant_override("margin_right", 12)
+	canvas.add_child(bar)
 
 	var hbox := HBoxContainer.new()
-	hbox.add_theme_constant_override("separation", 8)
-	bottom.add_child(hbox)
+	bar.add_child(hbox)
 
-	var end_turn_btn := Button.new()
-	end_turn_btn.text = "턴 종료"
-	end_turn_btn.pressed.connect(_on_end_turn_pressed)
-	hbox.add_child(end_turn_btn)
+	var left_spacer := Control.new()
+	left_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(left_spacer)
 
-	var back_btn := Button.new()
-	back_btn.text = "타이틀로"
-	back_btn.pressed.connect(_on_back_pressed)
-	hbox.add_child(back_btn)
+	var center_hbox := HBoxContainer.new()
+	center_hbox.add_theme_constant_override("separation", 16)
+	hbox.add_child(center_hbox)
 
-	_refresh_ui()
+	_round_label = Label.new()
+	center_hbox.add_child(_round_label)
+
+	_ally_label = Label.new()
+	center_hbox.add_child(_ally_label)
+
+	_enemy_label = Label.new()
+	center_hbox.add_child(_enemy_label)
+
+	var right_spacer := Control.new()
+	right_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(right_spacer)
+
+	var menu_btn := Button.new()
+	menu_btn.text = "☰"
+	menu_btn.pressed.connect(_on_menu_pressed)
+	hbox.add_child(menu_btn)
+
+
+func _build_bottom_panel(canvas: CanvasLayer) -> void:
+	_bottom_panel = MarginContainer.new()
+	_bottom_panel.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_bottom_panel.grow_vertical = Control.GROW_DIRECTION_BEGIN
+	_bottom_panel.add_theme_constant_override("margin_left", 12)
+	_bottom_panel.add_theme_constant_override("margin_right", 12)
+	_bottom_panel.add_theme_constant_override("margin_bottom", 12)
+	canvas.add_child(_bottom_panel)
+
+	var hbox := HBoxContainer.new()
+	hbox.add_theme_constant_override("separation", 16)
+	_bottom_panel.add_child(hbox)
+
+	var info_vbox := VBoxContainer.new()
+	info_vbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	info_vbox.add_theme_constant_override("separation", 4)
+	hbox.add_child(info_vbox)
+
+	_unit_name_label = Label.new()
+	info_vbox.add_child(_unit_name_label)
+
+	_unit_stats_label = Label.new()
+	info_vbox.add_child(_unit_stats_label)
+
+	_log_label = Label.new()
+	info_vbox.add_child(_log_label)
+
+	var sep := VSeparator.new()
+	hbox.add_child(sep)
+
+	var action_vbox := VBoxContainer.new()
+	action_vbox.add_theme_constant_override("separation", 6)
+	hbox.add_child(action_vbox)
+
+	var btn_hbox := HBoxContainer.new()
+	btn_hbox.add_theme_constant_override("separation", 6)
+	action_vbox.add_child(btn_hbox)
+
+	_end_round_btn = Button.new()
+	_end_round_btn.text = "라운드 종료"
+	_end_round_btn.pressed.connect(_on_end_round_pressed)
+	btn_hbox.add_child(_end_round_btn)
+
+	_wait_turn_btn = Button.new()
+	_wait_turn_btn.text = "대기"
+	_wait_turn_btn.pressed.connect(_on_wait_turn_pressed)
+	btn_hbox.add_child(_wait_turn_btn)
+
+	_end_turn_btn = Button.new()
+	_end_turn_btn.text = "턴 종료"
+	_end_turn_btn.pressed.connect(_on_end_turn_pressed)
+	btn_hbox.add_child(_end_turn_btn)
+
+	_queue_container = HBoxContainer.new()
+	_queue_container.add_theme_constant_override("separation", 8)
+	action_vbox.add_child(_queue_container)
+
+
+func _build_menu_popup(canvas: CanvasLayer) -> void:
+	_menu_popup = HudMenuPopup.new()
+	canvas.add_child(_menu_popup)
+	_menu_popup.add_item("타이틀로", _on_back_pressed)
 
 
 # ============================================================
@@ -208,6 +286,7 @@ func _handle_cell_click(cell: Vector2i) -> void:
 func _deselect() -> void:
 	_selected_id = ""
 	_phase = InputPhase.IDLE
+	_advance_to_player_turn()
 	_refresh_overlays()
 	_refresh_ui()
 
@@ -288,22 +367,41 @@ func _refresh_overlays() -> void:
 
 
 func _refresh_ui() -> void:
-	if _turn_label == null:
-		return
+	_round_label.text = "라운드 %d" % _state.round_number
+	_ally_label.text = "아군 %d" % _count_alive("player")
+	_enemy_label.text = "적군 %d" % _count_alive("enemy")
+
 	var active := _state.get_active_unit()
 	if active == null:
-		_turn_label.text = "전투 종료"
+		_bottom_panel.visible = false
 		return
-	var team_str := "아군" if active.team == "player" else "적군"
-	_turn_label.text = (
-		"[%s] %s  HP %d/%d  AP %d/%d"
+
+	_bottom_panel.visible = true
+
+	var team_queue := _state.get_remaining_team_queue(active.team)
+	_rebuild_queue(team_queue)
+
+	var is_player_turn := active.team == "player"
+	_end_round_btn.disabled = not is_player_turn
+	_wait_turn_btn.disabled = not is_player_turn or team_queue.size() <= 1
+	_end_turn_btn.disabled = not is_player_turn
+
+	if not is_player_turn:
+		_unit_name_label.text = "적군 차례"
+		_unit_stats_label.text = ""
+		return
+
+	_unit_name_label.text = active.display_name
+	_unit_stats_label.text = (
+		"HP %d/%d  AP %d/%d  피해 %d-%d  방어 %d"
 		% [
-			team_str,
-			active.display_name,
 			active.hp,
 			active.max_hp,
 			active.ap,
 			active.max_ap,
+			active.damage_min,
+			active.damage_max,
+			active.armor,
 		]
 	)
 
@@ -332,11 +430,24 @@ func _check_outcome() -> void:
 		_refresh_ui()
 		return
 	_refresh_overlays()
-	if outcome == "victory":
-		_turn_label.text = "승리!"
-	else:
-		_turn_label.text = "패배..."
+	_bottom_panel.visible = true
+	_unit_name_label.text = "승리!" if outcome == "victory" else "패배..."
+	_unit_stats_label.text = ""
 	get_tree().create_timer(2.0).timeout.connect(_on_back_pressed)
+
+
+func _on_menu_pressed() -> void:
+	_menu_popup.toggle()
+
+
+func _on_end_round_pressed() -> void:
+	_state.end_player_phase()
+	_deselect()
+
+
+func _on_wait_turn_pressed() -> void:
+	_state.wait_turn()
+	_deselect()
 
 
 func _on_end_turn_pressed() -> void:
@@ -351,6 +462,33 @@ func _on_back_pressed() -> void:
 # ============================================================
 # 헬퍼
 # ============================================================
+
+
+func _advance_to_player_turn() -> void:
+	var active := _state.get_active_unit()
+	while active != null and active.team == "enemy":
+		if _state.get_outcome() != "ongoing":
+			return
+		_state.end_turn()
+		active = _state.get_active_unit()
+
+
+func _rebuild_queue(queue: Array[CombatUnit]) -> void:
+	for child: Node in _queue_container.get_children():
+		_queue_container.remove_child(child)
+		child.queue_free()
+	for i: int in queue.size():
+		var lbl := Label.new()
+		lbl.text = ("▶ " if i == 0 else "") + queue[i].display_name
+		_queue_container.add_child(lbl)
+
+
+func _count_alive(team: String) -> int:
+	var n: int = 0
+	for unit: CombatUnit in _state.get_all_units():
+		if unit.alive and unit.team == team:
+			n += 1
+	return n
 
 
 func _find_unit(uid: String) -> CombatUnit:

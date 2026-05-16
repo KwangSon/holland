@@ -1,5 +1,7 @@
 class_name CombatState
 
+var round_number: int = 1
+
 var _board: CombatBoard
 var _units: Dictionary = {}  # unit_id → CombatUnit
 var _turn_order: Array[String] = []  # unit_ids sorted by initiative
@@ -114,10 +116,67 @@ func attack(attacker_id: String, defender_id: String) -> Dictionary:
 func end_turn() -> void:
 	if _turn_order.is_empty():
 		return
+	if _turn_index + 1 >= _turn_order.size():
+		round_number += 1
 	_turn_index = (_turn_index + 1) % _turn_order.size()
 	var active := get_active_unit()
 	if active != null:
 		active.ap = active.max_ap
+
+
+## Returns units of the given team remaining to act in the current turn cycle.
+func get_remaining_team_queue(team: String) -> Array[CombatUnit]:
+	var result: Array[CombatUnit] = []
+	for i: int in range(_turn_index, _turn_order.size()):
+		var unit: CombatUnit = _units.get(_turn_order[i], null)
+		if unit != null and unit.alive and unit.team == team:
+			result.append(unit)
+	return result
+
+
+## Defers the active player unit to the end of the remaining player queue.
+func wait_turn() -> void:
+	if _turn_order.is_empty():
+		return
+	var active := get_active_unit()
+	if active == null or active.team != "player":
+		return
+	var current_id := _turn_order[_turn_index]
+	var last_player_pos := _turn_index
+	for i: int in range(_turn_index + 1, _turn_order.size()):
+		var u: CombatUnit = _units.get(_turn_order[i], null)
+		if u != null and u.team == "player":
+			last_player_pos = i
+	if last_player_pos == _turn_index:
+		end_turn()
+		return
+	_turn_order.remove_at(_turn_index)
+	_turn_order.insert(last_player_pos, current_id)
+	var next := get_active_unit()
+	if next != null:
+		next.ap = next.max_ap
+
+
+## Skips all remaining player turns and advances to the next enemy unit.
+func end_player_phase() -> void:
+	if _turn_order.is_empty():
+		return
+	var active := get_active_unit()
+	if active == null or active.team != "player":
+		return
+	var found := false
+	for i: int in range(_turn_index, _turn_order.size()):
+		var u: CombatUnit = _units.get(_turn_order[i], null)
+		if u != null and u.team != "player":
+			_turn_index = i
+			found = true
+			break
+	if not found:
+		round_number += 1
+		_turn_index = 0
+	var next := get_active_unit()
+	if next != null:
+		next.ap = next.max_ap
 
 
 func get_outcome() -> String:

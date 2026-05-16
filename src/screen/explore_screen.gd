@@ -8,6 +8,9 @@ var _marker: Node2D
 var _marker_pos: Vector2 = Vector2.ZERO
 var _tween: Tween = null
 
+var _pause_btn: Button
+var _menu_popup: HudMenuPopup
+
 
 func _ready() -> void:
 	_setup_map()
@@ -44,27 +47,47 @@ func _setup_marker() -> void:
 
 func _setup_ui() -> void:
 	var canvas := CanvasLayer.new()
+	canvas.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(canvas)
+	_build_top_bar(canvas)
+	_build_menu_popup(canvas)
 
-	var margin := MarginContainer.new()
-	margin.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	margin.add_theme_constant_override("margin_left", 12)
-	margin.add_theme_constant_override("margin_bottom", 12)
-	canvas.add_child(margin)
+
+func _build_top_bar(canvas: CanvasLayer) -> void:
+	var bar := MarginContainer.new()
+	bar.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	bar.add_theme_constant_override("margin_top", 8)
+	bar.add_theme_constant_override("margin_left", 12)
+	bar.add_theme_constant_override("margin_right", 12)
+	canvas.add_child(bar)
 
 	var hbox := HBoxContainer.new()
-	hbox.add_theme_constant_override("separation", 8)
-	margin.add_child(hbox)
+	bar.add_child(hbox)
 
-	var combat_btn := Button.new()
-	combat_btn.text = "전투 테스트"
-	combat_btn.pressed.connect(_on_combat_pressed)
-	hbox.add_child(combat_btn)
+	var left_spacer := Control.new()
+	left_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(left_spacer)
 
-	var title_btn := Button.new()
-	title_btn.text = "타이틀로"
-	title_btn.pressed.connect(_on_title_pressed)
-	hbox.add_child(title_btn)
+	_pause_btn = Button.new()
+	_pause_btn.text = "⏸"
+	_pause_btn.pressed.connect(_on_pause_pressed)
+	hbox.add_child(_pause_btn)
+
+	var right_spacer := Control.new()
+	right_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_child(right_spacer)
+
+	var menu_btn := Button.new()
+	menu_btn.text = "☰"
+	menu_btn.pressed.connect(_on_menu_pressed)
+	hbox.add_child(menu_btn)
+
+
+func _build_menu_popup(canvas: CanvasLayer) -> void:
+	_menu_popup = HudMenuPopup.new()
+	canvas.add_child(_menu_popup)
+	_menu_popup.add_item("전투 테스트", _on_combat_pressed)
+	_menu_popup.add_item("타이틀로", _on_title_pressed)
 
 
 # ============================================================
@@ -107,6 +130,15 @@ func _on_marker_draw() -> void:
 # ============================================================
 # 버튼 콜백
 # ============================================================
+
+
+func _on_pause_pressed() -> void:
+	get_tree().paused = not get_tree().paused
+	_pause_btn.text = "▶" if get_tree().paused else "⏸"
+
+
+func _on_menu_pressed() -> void:
+	_menu_popup.toggle()
 
 
 func _on_combat_pressed() -> void:
