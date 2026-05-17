@@ -22,7 +22,7 @@ static func get_attack_targets(
 		return []
 	if attacker.fatigue + ATTACK_FATIGUE_COST > attacker.max_fatigue:
 		return []
-		
+
 	var result: Array[String] = []
 	for neighbor: Vector2i in board.get_neighbors(attacker.position):
 		if not board.occupied.has(neighbor):

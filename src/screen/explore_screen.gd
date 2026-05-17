@@ -16,6 +16,7 @@ func _ready() -> void:
 	_setup_map()
 	_setup_marker()
 	_setup_ui()
+	_setup_camera()
 
 
 func initialize(_data: Dictionary) -> void:
@@ -25,6 +26,13 @@ func initialize(_data: Dictionary) -> void:
 # ============================================================
 # 초기화
 # ============================================================
+
+
+func _setup_camera() -> void:
+	var camera := FreeCamera.new()
+	camera.name = "FreeCamera"
+	camera.position = get_viewport_rect().size / 2.0
+	add_child(camera)
 
 
 func _setup_map() -> void:

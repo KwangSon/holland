@@ -3,7 +3,8 @@ extends Node2D
 
 func _ready() -> void:
 	SaveManager.rna = {
-		"party": [
+		"party":
+		[
 			{
 				"id": "p1",
 				"display_name": "기사",
@@ -33,8 +34,10 @@ func _ready() -> void:
 				"is_ai": true,
 			},
 		],
-		"encounter": {
-			"enemies": [
+		"encounter":
+		{
+			"enemies":
+			[
 				{
 					"id": "e1",
 					"display_name": "도적",
