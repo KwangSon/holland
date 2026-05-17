@@ -1,19 +1,28 @@
 class_name CombatRules
 
+const MOVE_FATIGUE_COST: int = 20
+const ATTACK_FATIGUE_COST: int = 30
+const MOVE_RANGE: int = 3
+
 
 ## Returns passable cells the unit can move to this turn.
 static func get_legal_moves(unit: CombatUnit, board: CombatBoard) -> Array[Vector2i]:
-	if not unit.alive or unit.ap <= 0:
+	if not unit.alive or unit.has_acted:
 		return []
-	return board.get_reachable(unit.position, unit.move_range)
+	if unit.fatigue + MOVE_FATIGUE_COST > unit.max_fatigue:
+		return []
+	return board.get_reachable(unit.position, MOVE_RANGE)
 
 
 ## Returns ids of living enemies adjacent to attacker.
 static func get_attack_targets(
 	attacker: CombatUnit, board: CombatBoard, all_units: Array[CombatUnit]
 ) -> Array[String]:
-	if not attacker.alive or attacker.ap <= 0:
+	if not attacker.alive or attacker.has_acted:
 		return []
+	if attacker.fatigue + ATTACK_FATIGUE_COST > attacker.max_fatigue:
+		return []
+		
 	var result: Array[String] = []
 	for neighbor: Vector2i in board.get_neighbors(attacker.position):
 		if not board.occupied.has(neighbor):
@@ -26,43 +35,25 @@ static func get_attack_targets(
 	return result
 
 
-## Hit probability clamped to [5, 95].
-static func calc_hit_chance(attacker: CombatUnit, defender: CombatUnit) -> int:
-	return clampi(attacker.melee_skill - defender.melee_defense + 50, 5, 95)
-
-
-## Rolls an attack using the provided RNG. Pure — does NOT modify any unit.
-## Returns: {hit, roll, raw_damage, armor_absorbed, hp_damage}
+## Rolls an attack. Simple melee combat: 100% hit chance, flat damage.
+## Returns: {hit, raw_damage, hp_damage}
 static func roll_attack(
-	attacker: CombatUnit, defender: CombatUnit, rng: RandomNumberGenerator
+	attacker: CombatUnit, _defender: CombatUnit, _rng: RandomNumberGenerator
 ) -> Dictionary:
-	var hit_chance := calc_hit_chance(attacker, defender)
-	var roll := rng.randi_range(1, 100)
-	var hit := roll <= hit_chance
-
-	var raw_damage := 0
-	var armor_absorbed := 0
-	var hp_damage := 0
-
-	if hit:
-		raw_damage = rng.randi_range(attacker.damage_min, attacker.damage_max)
-		armor_absorbed = mini(defender.armor, raw_damage)
-		hp_damage = raw_damage - armor_absorbed
+	var raw_damage := attacker.attack_power
+	var hp_damage := raw_damage
 
 	return {
-		"hit": hit,
-		"roll": roll,
+		"hit": true,
 		"raw_damage": raw_damage,
-		"armor_absorbed": armor_absorbed,
 		"hp_damage": hp_damage,
 	}
 
 
-## Applies roll_attack result to defender (reduces armor/hp, marks dead).
+## Applies roll_attack result to defender.
 static func apply_attack_result(defender: CombatUnit, result: Dictionary) -> void:
 	if not result.get("hit", false):
 		return
-	defender.armor = maxi(0, defender.armor - result.get("armor_absorbed", 0))
 	defender.hp = maxi(0, defender.hp - result.get("hp_damage", 0))
 	if defender.hp <= 0:
 		defender.alive = false

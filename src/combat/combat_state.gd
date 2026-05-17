@@ -32,13 +32,12 @@ func start_encounter(
 		_board.set_occupied(unit.position, unit.id)
 		all.append(unit)
 
-	all.sort_custom(func(a: CombatUnit, b: CombatUnit) -> bool: return a.initiative > b.initiative)
 	_turn_order.clear()
 	for unit: CombatUnit in all:
 		_turn_order.append(unit.id)
 
 	_turn_index = 0
-	_get_active_ref().ap = _get_active_ref().max_ap
+	_get_active_ref().has_acted = false
 
 
 func get_active_unit() -> CombatUnit:
@@ -74,14 +73,15 @@ func get_attack_targets(unit_id: String) -> Array[String]:
 
 func move_unit(unit_id: String, target: Vector2i) -> bool:
 	var unit: CombatUnit = _units.get(unit_id, null)
-	if unit == null or not unit.alive or unit.ap <= 0:
+	if unit == null or not unit.alive or unit.has_acted:
 		return false
 	if not target in CombatRules.get_legal_moves(unit, _board):
 		return false
 	_board.clear_occupied(unit.position)
 	unit.position = target
 	_board.set_occupied(target, unit_id)
-	unit.ap -= 1
+	unit.has_acted = true
+	unit.fatigue += CombatRules.MOVE_FATIGUE_COST
 	return true
 
 
@@ -91,7 +91,7 @@ func attack(attacker_id: String, defender_id: String) -> Dictionary:
 	var defender: CombatUnit = _units.get(defender_id, null)
 	if attacker == null or defender == null:
 		return {}
-	if not attacker.alive or not defender.alive or attacker.ap <= 0:
+	if not attacker.alive or not defender.alive or attacker.has_acted:
 		return {}
 	if not defender_id in CombatRules.get_attack_targets(attacker, _board, get_all_units()):
 		return {}
@@ -99,7 +99,8 @@ func attack(attacker_id: String, defender_id: String) -> Dictionary:
 	var result := CombatRules.roll_attack(attacker, defender, _rng)
 	CombatRules.apply_attack_result(defender, result)
 	result["killed"] = not defender.alive
-	attacker.ap -= 1
+	attacker.has_acted = true
+	attacker.fatigue += CombatRules.ATTACK_FATIGUE_COST
 
 	if not defender.alive:
 		_board.clear_occupied(defender.position)
@@ -121,7 +122,7 @@ func end_turn() -> void:
 	_turn_index = (_turn_index + 1) % _turn_order.size()
 	var active := get_active_unit()
 	if active != null:
-		active.ap = active.max_ap
+		active.has_acted = false
 
 
 ## Returns units of the given team remaining to act in the current turn cycle.
@@ -154,7 +155,7 @@ func wait_turn() -> void:
 	_turn_order.insert(last_player_pos, current_id)
 	var next := get_active_unit()
 	if next != null:
-		next.ap = next.max_ap
+		next.has_acted = false
 
 
 ## Skips all remaining player turns and advances to the next enemy unit.
@@ -176,7 +177,7 @@ func end_player_phase() -> void:
 		_turn_index = 0
 	var next := get_active_unit()
 	if next != null:
-		next.ap = next.max_ap
+		next.has_acted = false
 
 
 func get_outcome() -> String:

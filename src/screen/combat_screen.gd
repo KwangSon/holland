@@ -393,15 +393,13 @@ func _refresh_ui() -> void:
 
 	_unit_name_label.text = active.display_name
 	_unit_stats_label.text = (
-		"HP %d/%d  AP %d/%d  피해 %d-%d  방어 %d"
+		"HP %d/%d  피로도 %d/%d  공격력 %d"
 		% [
 			active.hp,
 			active.max_hp,
-			active.ap,
-			active.max_ap,
-			active.damage_min,
-			active.damage_max,
-			active.armor,
+			active.fatigue,
+			active.max_fatigue,
+			active.attack_power,
 		]
 	)
 
@@ -415,7 +413,7 @@ func _log_attack(result: Dictionary, defender_id: String) -> void:
 			msg += "  [사망]"
 		_log_label.text = msg
 	else:
-		_log_label.text = "공격 → %s  빗맘 (굴림 %d)" % [name_str, result.get("roll", 0)]
+		_log_label.text = "공격 → %s  빗나감" % [name_str]
 
 
 # ============================================================

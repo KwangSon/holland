@@ -8,14 +8,8 @@ func _make_unit(overrides: Dictionary = {}) -> CombatUnit:
 		"team": "player",
 		"position": Vector2i(0, 0),
 		"max_hp": 30,
-		"armor": 5,
-		"max_ap": 2,
-		"initiative": 5,
-		"melee_skill": 60,
-		"melee_defense": 10,
-		"damage_min": 5,
-		"damage_max": 10,
-		"move_range": 3,
+		"max_fatigue": 100,
+		"attack_power": 10,
 	}
 	defaults.merge(overrides, true)
 	return CombatUnit.create(defaults)
@@ -28,48 +22,20 @@ func _make_rng(rng_seed: int) -> RandomNumberGenerator:
 
 
 # ----------------------------------------------------------
-# calc_hit_chance
-# ----------------------------------------------------------
-
-
-func test_hit_chance_basic() -> void:
-	var atk := _make_unit({"melee_skill": 60})
-	var def := _make_unit({"melee_defense": 10})
-	assert_eq(CombatRules.calc_hit_chance(atk, def), 95)  # 60 - 10 + 50 = 100 → clamped 95
-
-
-func test_hit_chance_clamp_max() -> void:
-	var atk := _make_unit({"melee_skill": 90})
-	var def := _make_unit({"melee_defense": 5})
-	assert_eq(CombatRules.calc_hit_chance(atk, def), 95)
-
-
-func test_hit_chance_clamp_min() -> void:
-	var atk := _make_unit({"melee_skill": 10})
-	var def := _make_unit({"melee_defense": 80})
-	assert_eq(CombatRules.calc_hit_chance(atk, def), 5)
-
-
-func test_hit_chance_exact_50() -> void:
-	var atk := _make_unit({"melee_skill": 50})
-	var def := _make_unit({"melee_defense": 50})
-	assert_eq(CombatRules.calc_hit_chance(atk, def), 50)
-
-
-# ----------------------------------------------------------
 # roll_attack — determinism
 # ----------------------------------------------------------
 
 
 func test_roll_attack_deterministic_with_same_seed() -> void:
-	var atk := _make_unit()
+	var atk := _make_unit({"attack_power": 15})
 	var def1 := _make_unit({"id": "d1", "team": "enemy"})
 	var def2 := _make_unit({"id": "d2", "team": "enemy"})
 	var result1 := CombatRules.roll_attack(atk, def1, _make_rng(42))
 	var result2 := CombatRules.roll_attack(atk, def2, _make_rng(42))
 	assert_eq(result1["hit"], result2["hit"])
-	assert_eq(result1["roll"], result2["roll"])
+	assert_eq(result1["raw_damage"], result2["raw_damage"])
 	assert_eq(result1["hp_damage"], result2["hp_damage"])
+	assert_eq(result1["hp_damage"], 15)
 
 
 func test_roll_attack_does_not_modify_units() -> void:
@@ -86,38 +52,26 @@ func test_roll_attack_does_not_modify_units() -> void:
 
 
 func test_apply_hit_reduces_hp() -> void:
-	var atk := _make_unit({"melee_skill": 99})  # near certain hit
-	var def := _make_unit({"id": "d1", "team": "enemy", "armor": 0, "hp": 30, "max_hp": 30})
+	var atk := _make_unit({"attack_power": 10})
+	var def := _make_unit({"id": "d1", "team": "enemy", "hp": 30, "max_hp": 30})
 	var result := CombatRules.roll_attack(atk, def, _make_rng(1))
 	CombatRules.apply_attack_result(def, result)
-	if result["hit"]:
-		assert_lt(def.hp, 30)
-	else:
-		assert_eq(def.hp, 30)
-
-
-func test_apply_hit_reduces_armor_first() -> void:
-	var def := _make_unit({"id": "d1", "team": "enemy", "armor": 100, "hp": 30, "max_hp": 30})
-	var result := {"hit": true, "hp_damage": 0, "armor_absorbed": 8}
-	CombatRules.apply_attack_result(def, result)
-	assert_eq(def.hp, 30)
-	assert_eq(def.armor, 92)
+	assert_eq(def.hp, 20)
 
 
 func test_apply_lethal_hit_marks_dead() -> void:
-	var def := _make_unit({"id": "d1", "team": "enemy", "armor": 0, "hp": 5, "max_hp": 30})
-	var result := {"hit": true, "hp_damage": 10, "armor_absorbed": 0}
+	var def := _make_unit({"id": "d1", "team": "enemy", "hp": 5, "max_hp": 30})
+	var result := {"hit": true, "hp_damage": 10}
 	CombatRules.apply_attack_result(def, result)
 	assert_eq(def.hp, 0)
 	assert_false(def.alive)
 
 
 func test_apply_miss_does_nothing() -> void:
-	var def := _make_unit({"id": "d1", "team": "enemy", "armor": 5, "hp": 30, "max_hp": 30})
-	var result := {"hit": false, "hp_damage": 0, "armor_absorbed": 0}
+	var def := _make_unit({"id": "d1", "team": "enemy", "hp": 30, "max_hp": 30})
+	var result := {"hit": false, "hp_damage": 0}
 	CombatRules.apply_attack_result(def, result)
 	assert_eq(def.hp, 30)
-	assert_eq(def.armor, 5)
 
 
 # ----------------------------------------------------------
