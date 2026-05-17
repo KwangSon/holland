@@ -29,6 +29,7 @@ static func player_units() -> Array[CombatUnit]:
 					"max_hp": 22,
 					"max_fatigue": 80,
 					"attack_power": 9,
+					"is_ai": true,
 				}
 			)
 		),
@@ -63,6 +64,7 @@ static func enemy_units() -> Array[CombatUnit]:
 					"max_hp": 22,
 					"max_fatigue": 90,
 					"attack_power": 10,
+					"is_ai": true,
 				}
 			)
 		),
@@ -77,6 +79,7 @@ static func enemy_units() -> Array[CombatUnit]:
 					"max_hp": 30,
 					"max_fatigue": 110,
 					"attack_power": 11,
+					"is_ai": true,
 				}
 			)
 		),
@@ -91,6 +94,7 @@ static func enemy_units() -> Array[CombatUnit]:
 					"max_hp": 28,
 					"max_fatigue": 95,
 					"attack_power": 12,
+					"is_ai": true,
 				}
 			)
 		),

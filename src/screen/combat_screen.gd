@@ -48,6 +48,7 @@ func _ready() -> void:
 	_setup_combat()
 	_setup_overlay_layers()
 	_setup_ui()
+	_start_turn()
 
 
 func initialize(_data: Dictionary) -> void:
@@ -286,9 +287,9 @@ func _handle_cell_click(cell: Vector2i) -> void:
 func _deselect() -> void:
 	_selected_id = ""
 	_phase = InputPhase.IDLE
-	_advance_to_player_turn()
 	_refresh_overlays()
 	_refresh_ui()
+	_start_turn()
 
 
 # ============================================================
@@ -386,8 +387,8 @@ func _refresh_ui() -> void:
 	_wait_turn_btn.disabled = not is_player_turn or team_queue.size() <= 1
 	_end_turn_btn.disabled = not is_player_turn
 
-	if not is_player_turn:
-		_unit_name_label.text = "적군 차례"
+	if active.is_ai:
+		_unit_name_label.text = active.display_name + " (AI 차례)"
 		_unit_stats_label.text = ""
 		return
 
@@ -462,13 +463,95 @@ func _on_back_pressed() -> void:
 # ============================================================
 
 
-func _advance_to_player_turn() -> void:
+func _start_turn() -> void:
+	if _state.get_outcome() != "ongoing":
+		_check_outcome()
+		return
+		
 	var active := _state.get_active_unit()
-	while active != null and active.team == "enemy":
-		if _state.get_outcome() != "ongoing":
-			return
+	if active == null:
+		return
+		
+	if active.is_ai:
+		_run_ai_turn(active)
+
+
+func _run_ai_turn(active: CombatUnit) -> void:
+	_phase = InputPhase.IDLE
+	_selected_id = active.id
+	_refresh_overlays()
+	_refresh_ui()
+	
+	# 대기시간으로 AI 턴임을 알림
+	await get_tree().create_timer(0.5).timeout
+	
+	if _state.get_outcome() != "ongoing" or not active.alive:
+		return
+		
+	var all_units := _state.get_all_units()
+	var enemies: Array[CombatUnit] = []
+	for u in all_units:
+		if u.alive and u.team != active.team:
+			enemies.append(u)
+			
+	if enemies.is_empty():
 		_state.end_turn()
-		active = _state.get_active_unit()
+		_deselect()
+		return
+		
+	var board := _state.get_board()
+	var closest_enemy: CombatUnit = null
+	var min_dist := 999999
+	for e in enemies:
+		var dist: int = board.hex_distance(active.position, e.position)
+		if dist < min_dist:
+			min_dist = dist
+			closest_enemy = e
+			
+	if closest_enemy == null:
+		_state.end_turn()
+		_deselect()
+		return
+		
+	# 이동 가능한 칸 중 적과 가장 가까운 곳 선택
+	var legal_moves := _state.get_legal_moves(active.id)
+	var best_move := active.position
+	var best_dist: int = board.hex_distance(active.position, closest_enemy.position)
+	
+	for cell in legal_moves:
+		var dist: int = board.hex_distance(cell, closest_enemy.position)
+		if dist < best_dist:
+			best_dist = dist
+			best_move = cell
+			
+	if best_move != active.position:
+		_state.move_unit(active.id, best_move)
+		_refresh_overlays()
+		_refresh_ui()
+		await get_tree().create_timer(0.5).timeout
+		
+	if _state.get_outcome() != "ongoing" or not active.alive:
+		return
+		
+	# 공격
+	var targets := _state.get_attack_targets(active.id)
+	if targets.has(closest_enemy.id):
+		var result := _state.attack(active.id, closest_enemy.id)
+		_log_attack(result, closest_enemy.id)
+		_refresh_overlays()
+		_refresh_ui()
+		await get_tree().create_timer(0.5).timeout
+	elif targets.size() > 0:
+		var result := _state.attack(active.id, targets[0])
+		_log_attack(result, targets[0])
+		_refresh_overlays()
+		_refresh_ui()
+		await get_tree().create_timer(0.5).timeout
+		
+	_check_outcome()
+	if _state.get_outcome() == "ongoing":
+		_state.end_turn()
+		_deselect()
 
 
 func _rebuild_queue(queue: Array[CombatUnit]) -> void:
