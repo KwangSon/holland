@@ -3,10 +3,88 @@ class_name ExploreScreen extends Node2D
 const MAP_TEXTURE := preload("res://asset/map.jpg")
 const MARKER_RADIUS := 10.0
 const TWEEN_DURATION := 0.25
+const ZONE_RADIUS := 80.0
+
+## 마을/POI 정의 — {name, position, encounter}
+const VILLAGE_ZONES: Array[Dictionary] = [
+	{
+		"name": "성채",
+		"position": Vector2(490, 420),
+		"encounter":
+		{
+			"enemies":
+			[
+				{
+					"id": "e1",
+					"display_name": "도적",
+					"team": "enemy",
+					"position": Vector2i(7, 3),
+					"max_hp": 30,
+					"max_fatigue": 90,
+					"attack_power": 10,
+					"is_ai": true,
+				},
+				{
+					"id": "e2",
+					"display_name": "중갑병",
+					"team": "enemy",
+					"position": Vector2i(6, 4),
+					"max_hp": 55,
+					"max_fatigue": 110,
+					"attack_power": 14,
+					"is_ai": true,
+				},
+			],
+			"seed": 42,
+		},
+	},
+	{
+		"name": "폐허",
+		"position": Vector2(850, 140),
+		"encounter":
+		{
+			"enemies":
+			[
+				{
+					"id": "e1",
+					"display_name": "해골 전사",
+					"team": "enemy",
+					"position": Vector2i(7, 3),
+					"max_hp": 25,
+					"max_fatigue": 80,
+					"attack_power": 12,
+					"is_ai": true,
+				},
+				{
+					"id": "e2",
+					"display_name": "해골 궁수",
+					"team": "enemy",
+					"position": Vector2i(7, 5),
+					"max_hp": 20,
+					"max_fatigue": 70,
+					"attack_power": 15,
+					"is_ai": true,
+				},
+				{
+					"id": "e3",
+					"display_name": "네크로맨서",
+					"team": "enemy",
+					"position": Vector2i(6, 4),
+					"max_hp": 35,
+					"max_fatigue": 100,
+					"attack_power": 18,
+					"is_ai": true,
+				},
+			],
+			"seed": 99,
+		},
+	},
+]
 
 var _marker: Node2D
 var _marker_pos: Vector2 = Vector2.ZERO
 var _tween: Tween = null
+var _zone_layer: Node2D
 
 var _pause_btn: Button
 var _menu_popup: HudMenuPopup
@@ -14,6 +92,7 @@ var _menu_popup: HudMenuPopup
 
 func _ready() -> void:
 	_setup_map()
+	_setup_zones()
 	_setup_marker()
 	_setup_ui()
 	_setup_camera()
@@ -42,6 +121,20 @@ func _setup_map() -> void:
 	var vp := get_viewport_rect().size
 	sprite.position = vp / 2.0
 	add_child(sprite)
+
+
+func _setup_zones() -> void:
+	_zone_layer = Node2D.new()
+	_zone_layer.name = "ZoneLayer"
+	add_child(_zone_layer)
+	for data: Dictionary in VILLAGE_ZONES:
+		var zone := VillageZone.create_zone(
+			data["name"],
+			data["position"],
+			ZONE_RADIUS,
+			data["encounter"],
+		)
+		_zone_layer.add_child(zone)
 
 
 func _setup_marker() -> void:
@@ -118,11 +211,50 @@ func _move_marker(target: Vector2) -> void:
 		_tween.kill()
 	_tween = create_tween()
 	_tween.tween_method(_set_marker_position, _marker.position, target, TWEEN_DURATION)
+	_tween.finished.connect(_on_marker_arrived)
 
 
 func _set_marker_position(pos: Vector2) -> void:
 	_marker.position = pos
 	_marker.queue_redraw()
+
+
+func _on_marker_arrived() -> void:
+	for zone: VillageZone in _zone_layer.get_children():
+		if zone.check_marker_overlap(_marker.position):
+			_enter_combat(zone)
+			return
+
+
+func _enter_combat(zone: VillageZone) -> void:
+	# 커서를 기본으로 복원
+	Input.set_default_cursor_shape(Input.CURSOR_ARROW)
+	# 인카운터 데이터 설정
+	SaveManager.rna["encounter"] = zone.encounter_data
+	if not SaveManager.rna.has("party"):
+		# 기본 파티 — 파티가 아직 없으면 테스트용 기본값 사용
+		SaveManager.rna["party"] = [
+			{
+				"id": "p1",
+				"display_name": "기사",
+				"team": "player",
+				"position": Vector2i(1, 3),
+				"max_hp": 60,
+				"max_fatigue": 120,
+				"attack_power": 15,
+			},
+			{
+				"id": "p2",
+				"display_name": "궁수",
+				"team": "player",
+				"position": Vector2i(2, 4),
+				"max_hp": 30,
+				"max_fatigue": 80,
+				"attack_power": 12,
+				"is_ai": true,
+			},
+		]
+	ScreenManager.change_screen(ScreenManager.Screen.COMBAT)
 
 
 # ============================================================
