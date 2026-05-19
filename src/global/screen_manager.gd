@@ -33,6 +33,9 @@ func _ready() -> void:
 func change_screen(target: Screen, data: Dictionary = {}) -> void:
 	assert(target != Screen.NONE, "ScreenManager: cannot change to NONE screen")
 
+	# 화면 전환 시 일시정지 해제
+	get_tree().paused = false
+
 	var from: Screen = current_screen
 
 	_cleanup_current_screen()

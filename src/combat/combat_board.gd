@@ -87,8 +87,6 @@ func clear_occupied(cell: Vector2i) -> void:
 	occupied.erase(cell)
 
 
-## Flat-top odd-q offset → cube coordinates (matches Godot's TILE_LAYOUT_DIAMOND_DOWN + TILE_OFFSET_AXIS_VERTICAL).
-## Reference: https://www.redblobgames.com/grids/hexagons/#conversions-offset
 func _to_cube(cell: Vector2i) -> Vector3i:
 	# odd-q vertical layout: q = x, r = y - floor(x/2), s = -q - r
 	var q := cell.x

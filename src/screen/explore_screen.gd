@@ -129,11 +129,14 @@ func _setup_zones() -> void:
 	_zone_layer.name = "ZoneLayer"
 	add_child(_zone_layer)
 	for data: Dictionary in VILLAGE_ZONES:
-		var zone := VillageZone.create_zone(
-			data["name"],
-			data["position"],
-			ZONE_RADIUS,
-			data["encounter"],
+		var zone := (
+			VillageZone
+			. create_zone(
+				data["name"],
+				data["position"],
+				ZONE_RADIUS,
+				data["encounter"],
+			)
 		)
 		zone.marker_entered.connect(_on_zone_entered)
 		_zone_layer.add_child(zone)
@@ -201,10 +204,15 @@ func _build_top_bar(canvas: CanvasLayer) -> void:
 func _build_pause_menu(canvas: CanvasLayer) -> void:
 	_pause_menu = PauseMenuPopup.new()
 	canvas.add_child(_pause_menu)
-	_pause_menu.setup([
-		{"label": "타이틀로", "callback": _on_title_pressed},
-		{"label": "종료하기", "callback": _on_quit_pressed},
-	])
+	(
+		_pause_menu
+		. setup(
+			[
+				{"label": "타이틀로", "callback": _on_title_pressed},
+				{"label": "종료하기", "callback": _on_quit_pressed},
+			]
+		)
+	)
 
 
 # ============================================================

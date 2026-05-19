@@ -43,6 +43,10 @@ var _attack_btn: Button
 var _attack_mode: bool = false
 var _pause_menu: PauseMenuPopup
 
+var _result_panel: PanelContainer
+var _result_label: Label
+var _result_btn: Button
+
 # Hover pathfinding
 var _hovered_cell: Vector2i = Vector2i(-1, -1)
 var _hover_path: Array[Vector2i] = []
@@ -137,6 +141,7 @@ func _setup_ui() -> void:
 	_build_top_bar(canvas)
 	_build_bottom_panel(canvas)
 	_build_pause_menu(canvas)
+	_build_result_popup(canvas)
 	_refresh_ui()
 
 
@@ -171,6 +176,12 @@ func _build_top_bar(canvas: CanvasLayer) -> void:
 	var right_spacer := Control.new()
 	right_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.add_child(right_spacer)
+
+	# 도망가기 버튼
+	var flee_btn := Button.new()
+	flee_btn.text = "도망가기"
+	flee_btn.pressed.connect(_on_flee_pressed)
+	hbox.add_child(flee_btn)
 
 	# 설정 (X) 버튼
 	var settings_btn := Button.new()
@@ -255,6 +266,35 @@ func _build_pause_menu(canvas: CanvasLayer) -> void:
 			]
 		)
 	)
+
+
+func _build_result_popup(canvas: CanvasLayer) -> void:
+	_result_panel = PanelContainer.new()
+	_result_panel.set_anchors_preset(Control.PRESET_CENTER)
+	_result_panel.visible = false
+	canvas.add_child(_result_panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 32)
+	margin.add_theme_constant_override("margin_right", 32)
+	margin.add_theme_constant_override("margin_top", 32)
+	margin.add_theme_constant_override("margin_bottom", 32)
+	_result_panel.add_child(margin)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 24)
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	margin.add_child(vbox)
+
+	_result_label = Label.new()
+	_result_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_result_label.add_theme_font_size_override("font_size", 32)
+	vbox.add_child(_result_label)
+
+	_result_btn = Button.new()
+	_result_btn.text = "확인"
+	_result_btn.pressed.connect(_on_result_confirm_pressed)
+	vbox.add_child(_result_btn)
 
 
 # ============================================================
@@ -561,11 +601,23 @@ func _check_outcome() -> void:
 		_refresh_overlays()
 		_refresh_ui()
 		return
+	_phase = InputPhase.IDLE
 	_refresh_overlays()
-	_bottom_panel.visible = true
-	_unit_name_label.text = "승리!" if outcome == "victory" else "패배..."
-	_unit_stats_label.text = ""
-	get_tree().create_timer(2.0).timeout.connect(_on_back_pressed)
+	_bottom_panel.visible = false
+	_result_label.text = "전투 승리!" if outcome == "victory" else "전투 패배..."
+	_result_panel.visible = true
+
+
+func _on_result_confirm_pressed() -> void:
+	ScreenManager.change_screen(ScreenManager.Screen.EXPLORE)
+
+
+func _on_flee_pressed() -> void:
+	_phase = InputPhase.IDLE
+	_refresh_overlays()
+	_bottom_panel.visible = false
+	_result_label.text = "도망쳤습니다... (패배)"
+	_result_panel.visible = true
 
 
 func _on_settings_pressed() -> void:
