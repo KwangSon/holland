@@ -5,6 +5,7 @@ var display_name: String = ""
 var team: String = ""  # "player" | "enemy"
 var is_ai: bool = false
 var position: Vector2i = Vector2i.ZERO
+var visual_position: Vector2 = Vector2.ZERO  # For tween animation
 var alive: bool = true
 var hp: int = 0
 var max_hp: int = 0

@@ -39,7 +39,13 @@ var _queue_container: HBoxContainer
 var _end_round_btn: Button
 var _wait_turn_btn: Button
 var _end_turn_btn: Button
-var _menu_popup: HudMenuPopup
+var _attack_btn: Button
+var _attack_mode: bool = false
+var _pause_menu: PauseMenuPopup
+
+# Hover pathfinding
+var _hovered_cell: Vector2i = Vector2i(-1, -1)
+var _hover_path: Array[Vector2i] = []
 
 
 func _ready() -> void:
@@ -64,7 +70,8 @@ func initialize(_data: Dictionary) -> void:
 func _setup_camera() -> void:
 	var camera := FreeCamera.new()
 	camera.name = "FreeCamera"
-	camera.position = get_viewport_rect().size / 2.0
+	camera.position = Vector2(200, 200)
+	camera.zoom = Vector2(2.0, 2.0)
 	add_child(camera)
 
 
@@ -129,7 +136,7 @@ func _setup_ui() -> void:
 	add_child(canvas)
 	_build_top_bar(canvas)
 	_build_bottom_panel(canvas)
-	_build_menu_popup(canvas)
+	_build_pause_menu(canvas)
 	_refresh_ui()
 
 
@@ -165,10 +172,11 @@ func _build_top_bar(canvas: CanvasLayer) -> void:
 	right_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.add_child(right_spacer)
 
-	var menu_btn := Button.new()
-	menu_btn.text = "☰"
-	menu_btn.pressed.connect(_on_menu_pressed)
-	hbox.add_child(menu_btn)
+	# 설정 (X) 버튼
+	var settings_btn := Button.new()
+	settings_btn.text = "X"
+	settings_btn.pressed.connect(_on_settings_pressed)
+	hbox.add_child(settings_btn)
 
 
 func _build_bottom_panel(canvas: CanvasLayer) -> void:
@@ -224,15 +232,29 @@ func _build_bottom_panel(canvas: CanvasLayer) -> void:
 	_end_turn_btn.pressed.connect(_on_end_turn_pressed)
 	btn_hbox.add_child(_end_turn_btn)
 
+	# 공격 버튼 (턴 큐 위)
+	_attack_btn = Button.new()
+	_attack_btn.text = "공격"
+	_attack_btn.pressed.connect(_on_attack_pressed)
+	action_vbox.add_child(_attack_btn)
+
 	_queue_container = HBoxContainer.new()
 	_queue_container.add_theme_constant_override("separation", 8)
 	action_vbox.add_child(_queue_container)
 
 
-func _build_menu_popup(canvas: CanvasLayer) -> void:
-	_menu_popup = HudMenuPopup.new()
-	canvas.add_child(_menu_popup)
-	_menu_popup.add_item("타이틀로", _on_back_pressed)
+func _build_pause_menu(canvas: CanvasLayer) -> void:
+	_pause_menu = PauseMenuPopup.new()
+	canvas.add_child(_pause_menu)
+	(
+		_pause_menu
+		. setup(
+			[
+				{"label": "타이틀로", "callback": _on_back_pressed},
+				{"label": "종료하기", "callback": _on_quit_pressed},
+			]
+		)
+	)
 
 
 # ============================================================
@@ -241,6 +263,12 @@ func _build_menu_popup(canvas: CanvasLayer) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	# Handle mouse movement for hover path
+	if event is InputEventMouseMotion:
+		_on_mouse_move()
+		return
+
+	# Handle mouse button for click
 	if not event is InputEventMouseButton:
 		return
 	var mb := event as InputEventMouseButton
@@ -255,6 +283,38 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	_handle_cell_click(cell)
+
+
+func _on_mouse_move() -> void:
+	if _phase != InputPhase.UNIT_SELECTED:
+		_hovered_cell = Vector2i(-1, -1)
+		_hover_path = []
+		_refresh_overlays()
+		return
+
+	var active := _state.get_active_unit()
+	if active == null:
+		_hovered_cell = Vector2i(-1, -1)
+		_hover_path = []
+		_refresh_overlays()
+		return
+
+	var tile_local := _tile_layer.to_local(get_global_mouse_position())
+	var cell := _tile_layer.local_to_map(tile_local)
+
+	# Check if cell is a valid move target
+	var legal_moves := _state.get_legal_moves(active.id)
+	if cell in legal_moves:
+		if cell != _hovered_cell:
+			_hovered_cell = cell
+			# Find path from active unit to hovered cell
+			_hover_path = _state.get_board().find_path(active.position, cell)
+			_refresh_overlays()
+	else:
+		if _hovered_cell != Vector2i(-1, -1):
+			_hovered_cell = Vector2i(-1, -1)
+			_hover_path = []
+			_refresh_overlays()
 
 
 func _handle_cell_click(cell: Vector2i) -> void:
@@ -274,6 +334,22 @@ func _handle_cell_click(cell: Vector2i) -> void:
 			var board := _state.get_board()
 			var occupied_id: String = board.occupied.get(cell, "")
 
+			# Attack mode - click on tile to attack enemy on that tile
+			if _attack_mode:
+				if occupied_id != "" and occupied_id in _state.get_attack_targets(active.id):
+					var result := _state.attack(active.id, occupied_id)
+					_log_attack(result, occupied_id)
+					_attack_mode = false
+					_attack_btn.text = "공격"
+					_deselect()
+					_check_outcome()
+					return
+				# Click on empty tile in attack mode - just cancel attack mode
+				_attack_mode = false
+				_attack_btn.text = "공격"
+				_refresh_overlays()
+				return
+
 			# Attack?
 			if occupied_id != "" and occupied_id in _state.get_attack_targets(active.id):
 				var result := _state.attack(active.id, occupied_id)
@@ -284,7 +360,16 @@ func _handle_cell_click(cell: Vector2i) -> void:
 
 			# Move?
 			if cell in _state.get_legal_moves(active.id):
-				_state.move_unit(active.id, cell)
+				# Use hover path if available, otherwise find new path
+				var move_path: Array[Vector2i] = (
+					_hover_path
+					if _hover_path.size() > 0
+					else _state.get_board().find_path(active.position, cell)
+				)
+				if move_path.size() > 1:
+					_move_unit_along_path(active, move_path)
+				else:
+					_state.move_unit(active.id, cell)
 				_deselect()
 				return
 
@@ -295,6 +380,8 @@ func _handle_cell_click(cell: Vector2i) -> void:
 func _deselect() -> void:
 	_selected_id = ""
 	_phase = InputPhase.IDLE
+	_attack_mode = false
+	_attack_btn.text = "공격"
 	_refresh_overlays()
 	_refresh_ui()
 	_start_turn()
@@ -312,6 +399,29 @@ func _on_highlight_draw() -> void:
 	if active == null or active.id != _selected_id:
 		return
 
+	# Attack mode - show attack range with different colors for each direction (Flat-top)
+	if _attack_mode:
+		var board := _state.get_board()
+		# Color mapping for 6 directions: N=yellow, NE=orange, SE=red, S=purple, SW=blue, NW=green
+		var colors: Array[Color] = [
+			Color(1.0, 1.0, 0.0, 0.6),  # 노란색 (N)
+			Color(1.0, 0.65, 0.0, 0.6),  # 주황색 (NE)
+			Color(1.0, 0.0, 0.0, 0.6),  # 빨간색 (SE)
+			Color(0.6, 0.0, 0.8, 0.6),  # 보라색 (S)
+			Color(0.0, 0.5, 1.0, 0.6),  # 파란색 (SW)
+			Color(0.0, 1.0, 0.5, 0.6),  # 초록색 (NW)
+		]
+		# Use board.get_neighbors() for consistency
+		var neighbors := board.get_neighbors(active.position)
+		for i: int in neighbors.size():
+			_draw_hex(_highlight_layer, neighbors[i], colors[i])
+		# Show enemies in red on top
+		for uid: String in _state.get_attack_targets(_selected_id):
+			var unit: CombatUnit = _find_unit(uid)
+			if unit != null:
+				_draw_hex(_highlight_layer, unit.position, Color(1.0, 0.2, 0.2, 0.8))
+		return
+
 	# Movement range — blue
 	for cell: Vector2i in _state.get_legal_moves(_selected_id):
 		_draw_hex(_highlight_layer, cell, Color(0.2, 0.5, 1.0, 0.35))
@@ -325,6 +435,10 @@ func _on_highlight_draw() -> void:
 	# Selected cell — yellow outline
 	_draw_hex(_highlight_layer, active.position, Color(1.0, 0.9, 0.0, 0.5))
 
+	# Hover path — green
+	for cell: Vector2i in _hover_path:
+		_draw_hex(_highlight_layer, cell, Color(0.2, 0.8, 0.2, 0.5))
+
 
 func _on_unit_draw() -> void:
 	if _state == null:
@@ -333,22 +447,32 @@ func _on_unit_draw() -> void:
 	for unit: CombatUnit in _state.get_all_units():
 		if not unit.alive:
 			continue
-		var pos := _cell_to_local(unit.position)
+		# Use visual_position for smooth tween animation
+		var pos := (
+			unit.visual_position
+			if unit.visual_position != Vector2.ZERO
+			else _cell_to_local(unit.position)
+		)
 		var color := Color.CORNFLOWER_BLUE if unit.team == "player" else Color.INDIAN_RED
 		# Active unit gets a brighter tint.
 		if active != null and unit.id == active.id:
 			color = color.lightened(0.35)
 		_unit_layer.draw_circle(pos, 12.0, color)
-		# HP text
-		var hp_text := "%d" % unit.hp
-		_unit_layer.draw_string(
-			ThemeDB.fallback_font,
-			pos + Vector2(-6, 5),
-			hp_text,
-			HORIZONTAL_ALIGNMENT_LEFT,
-			-1,
-			11,
-			Color.WHITE
+		# HP bar
+		var bar_width: float = 24.0
+		var bar_height: float = 4.0
+		var hp_ratio: float = clamp(float(unit.hp) / float(unit.max_hp), 0.0, 1.0)
+
+		# Background (dark gray)
+		_unit_layer.draw_rect(
+			Rect2(pos.x - bar_width / 2.0, pos.y - 18.0, bar_width, bar_height),
+			Color(0.2, 0.2, 0.2)
+		)
+
+		# Current HP (red)
+		_unit_layer.draw_rect(
+			Rect2(pos.x - bar_width / 2.0, pos.y - 18.0, bar_width * hp_ratio, bar_height),
+			Color(0.9, 0.2, 0.2)
 		)
 
 
@@ -394,6 +518,7 @@ func _refresh_ui() -> void:
 	_end_round_btn.disabled = not is_player_turn
 	_wait_turn_btn.disabled = not is_player_turn or team_queue.size() <= 1
 	_end_turn_btn.disabled = not is_player_turn
+	_attack_btn.disabled = not is_player_turn
 
 	if active.is_ai:
 		_unit_name_label.text = active.display_name + " (AI 차례)"
@@ -443,8 +568,13 @@ func _check_outcome() -> void:
 	get_tree().create_timer(2.0).timeout.connect(_on_back_pressed)
 
 
-func _on_menu_pressed() -> void:
-	_menu_popup.toggle()
+func _on_settings_pressed() -> void:
+	_pause_menu.toggle()
+	get_tree().paused = _pause_menu.visible
+
+
+func _on_quit_pressed() -> void:
+	get_tree().quit()
 
 
 func _on_end_round_pressed() -> void:
@@ -455,6 +585,14 @@ func _on_end_round_pressed() -> void:
 func _on_wait_turn_pressed() -> void:
 	_state.wait_turn()
 	_deselect()
+
+
+func _on_attack_pressed() -> void:
+	if _phase != InputPhase.UNIT_SELECTED:
+		return
+	_attack_mode = not _attack_mode
+	_attack_btn.text = "취소" if _attack_mode else "공격"
+	_refresh_overlays()
 
 
 func _on_end_turn_pressed() -> void:
@@ -482,6 +620,12 @@ func _start_turn() -> void:
 
 	if active.is_ai:
 		_run_ai_turn(active)
+	else:
+		# Player turn - auto-select the active unit
+		_phase = InputPhase.UNIT_SELECTED
+		_selected_id = active.id
+		_refresh_overlays()
+		_refresh_ui()
 
 
 func _run_ai_turn(active: CombatUnit) -> void:
@@ -533,9 +677,13 @@ func _run_ai_turn(active: CombatUnit) -> void:
 			best_move = cell
 
 	if best_move != active.position:
-		_state.move_unit(active.id, best_move)
-		_refresh_overlays()
-		_refresh_ui()
+		var path := _state.get_board().find_path(active.position, best_move)
+		if path.size() > 1:
+			_move_unit_along_path(active, path)
+		else:
+			_state.move_unit(active.id, best_move)
+			_refresh_overlays()
+			_refresh_ui()
 		await get_tree().create_timer(0.5).timeout
 
 	if _state.get_outcome() != "ongoing" or not active.alive:
@@ -585,3 +733,38 @@ func _find_unit(uid: String) -> CombatUnit:
 		if unit.id == uid:
 			return unit
 	return null
+
+
+## Move unit along path with tween animation (non-blocking)
+func _move_unit_along_path(unit: CombatUnit, path: Array[Vector2i]) -> void:
+	if path.size() < 2:
+		# Instant move if no path
+		_state.move_unit(unit.id, path[0])
+		_refresh_overlays()
+		_refresh_ui()
+		return
+
+	# Set initial visual position
+	var start_pos := _cell_to_local(path[0])
+	unit.visual_position = start_pos
+
+	# Move to final destination in state
+	var dest := path[-1]
+	var dest_pos := _cell_to_local(dest)
+
+	# Create tween for smooth movement
+	var tween := create_tween()
+	tween.set_ease(Tween.EASE_IN_OUT)
+	tween.set_trans(Tween.TRANS_LINEAR)
+
+	# Tween visual position
+	tween.tween_property(unit, "visual_position", dest_pos, 0.2 * path.size())
+
+	# Update state after animation completes
+	tween.finished.connect(
+		func():
+			_state.move_unit(unit.id, dest)
+			unit.visual_position = dest_pos
+			_refresh_overlays()
+			_refresh_ui()
+	)

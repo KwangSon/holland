@@ -21,6 +21,7 @@ func _init() -> void:
 
 
 func _ready() -> void:
+	area_entered.connect(_on_area_entered)
 	mouse_entered.connect(_on_mouse_entered)
 	mouse_exited.connect(_on_mouse_exited)
 	_build_label()
@@ -49,19 +50,15 @@ static func create_zone(
 	return zone
 
 
-## 마커(CharacterBody2D 또는 Area2D)가 이 영역에 도달했는지 검사한다.
-## ExploreScreen에서 마커 이동 완료 시 호출.
-func check_marker_overlap(marker_pos: Vector2) -> bool:
-	var shape: CollisionShape2D = get_node("CollisionShape")
-	assert(shape != null, "VillageZone: missing CollisionShape")
-	var circle: CircleShape2D = shape.shape as CircleShape2D
-	assert(circle != null, "VillageZone: shape is not CircleShape2D")
-	return marker_pos.distance_to(global_position) <= circle.radius
-
-
 # ============================================================
 # 마우스 커서
 # ============================================================
+
+
+func _on_area_entered(area: Area2D) -> void:
+	# 마커의 Area2D 가 진입하면 시그널 발생
+	if area.name == "MarkerArea":
+		marker_entered.emit(self)
 
 
 func _on_mouse_entered() -> void:

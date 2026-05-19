@@ -57,14 +57,14 @@ func test_even_row_has_six_neighbors_in_full_grid() -> void:
 func test_even_col_neighbors_correct() -> void:
 	var board := _full_board()
 	var neighbors := board.get_neighbors(Vector2i(4, 2))
-	# even col offsets: (0,-1),(+1,-1),(+1,0),(0,+1),(-1,0),(-1,-1)
+	# uniform offsets: (-1,-1)=N, (0,-1)=NE, (1,0)=SE, (1,1)=S, (0,1)=SW, (-1,0)=NW
 	var expected: Array[Vector2i] = [
-		Vector2i(4, 1),
-		Vector2i(5, 1),
-		Vector2i(5, 2),
-		Vector2i(4, 3),
-		Vector2i(3, 2),
-		Vector2i(3, 1),
+		Vector2i(3, 1),  # N
+		Vector2i(4, 1),  # NE
+		Vector2i(5, 2),  # SE
+		Vector2i(5, 3),  # S
+		Vector2i(4, 3),  # SW
+		Vector2i(3, 2),  # NW
 	]
 	for cell: Vector2i in expected:
 		assert_true(cell in neighbors, "expected neighbor %s missing" % cell)
@@ -78,14 +78,14 @@ func test_even_col_neighbors_correct() -> void:
 func test_odd_col_neighbors_correct() -> void:
 	var board := _full_board()
 	var neighbors := board.get_neighbors(Vector2i(5, 2))
-	# odd col offsets: (0,-1),(+1,0),(+1,+1),(0,+1),(-1,+1),(-1,0)
+	# uniform offsets: (-1,-1)=N, (0,-1)=NE, (1,0)=SE, (1,1)=S, (0,1)=SW, (-1,0)=NW
 	var expected: Array[Vector2i] = [
-		Vector2i(5, 1),
-		Vector2i(6, 2),
-		Vector2i(6, 3),
-		Vector2i(5, 3),
-		Vector2i(4, 3),
-		Vector2i(4, 2),
+		Vector2i(4, 1),  # N
+		Vector2i(5, 1),  # NE
+		Vector2i(6, 2),  # SE
+		Vector2i(6, 3),  # S
+		Vector2i(5, 3),  # SW
+		Vector2i(4, 2),  # NW
 	]
 	for cell: Vector2i in expected:
 		assert_true(cell in neighbors, "expected neighbor %s missing" % cell)
@@ -141,12 +141,12 @@ func test_reachable_range_one_has_six_cells_in_open_grid() -> void:
 
 func test_occupied_cell_blocks_movement() -> void:
 	var board := _full_board()
-	# Block all flat-top neighbors of (4,2) except (5,2): (4,1),(5,1),(4,3),(3,2),(3,1).
+	# Block all uniform neighbors of (4,2) except SE (5,2): N(3,1), NE(4,1), S(5,3), SW(4,3), NW(3,2).
+	board.set_occupied(Vector2i(3, 1), "x")
 	board.set_occupied(Vector2i(4, 1), "x")
-	board.set_occupied(Vector2i(5, 1), "x")
+	board.set_occupied(Vector2i(5, 3), "x")
 	board.set_occupied(Vector2i(4, 3), "x")
 	board.set_occupied(Vector2i(3, 2), "x")
-	board.set_occupied(Vector2i(3, 1), "x")
 	var reachable := board.get_reachable(Vector2i(4, 2), 1)
 	assert_eq(reachable.size(), 1)
 	assert_true(Vector2i(5, 2) in reachable)

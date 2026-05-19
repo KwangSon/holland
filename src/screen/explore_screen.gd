@@ -82,12 +82,13 @@ const VILLAGE_ZONES: Array[Dictionary] = [
 ]
 
 var _marker: Node2D
+var _marker_area: Area2D
 var _marker_pos: Vector2 = Vector2.ZERO
 var _tween: Tween = null
 var _zone_layer: Node2D
 
 var _pause_btn: Button
-var _menu_popup: HudMenuPopup
+var _pause_menu: PauseMenuPopup
 
 
 func _ready() -> void:
@@ -134,6 +135,7 @@ func _setup_zones() -> void:
 			ZONE_RADIUS,
 			data["encounter"],
 		)
+		zone.marker_entered.connect(_on_zone_entered)
 		_zone_layer.add_child(zone)
 
 
@@ -145,13 +147,24 @@ func _setup_marker() -> void:
 	_marker.draw.connect(_on_marker_draw)
 	add_child(_marker)
 
+	# Area2D - 충돌 감지 (자식 노드)
+	_marker_area = Area2D.new()
+	_marker_area.name = "MarkerArea"
+	var collision_shape := CollisionShape2D.new()
+	collision_shape.name = "CollisionShape"
+	var circle_shape := CircleShape2D.new()
+	circle_shape.radius = MARKER_RADIUS
+	collision_shape.shape = circle_shape
+	_marker_area.add_child(collision_shape)
+	_marker.add_child(_marker_area)
+
 
 func _setup_ui() -> void:
 	var canvas := CanvasLayer.new()
 	canvas.process_mode = Node.PROCESS_MODE_ALWAYS
 	add_child(canvas)
 	_build_top_bar(canvas)
-	_build_menu_popup(canvas)
+	_build_pause_menu(canvas)
 
 
 func _build_top_bar(canvas: CanvasLayer) -> void:
@@ -178,17 +191,20 @@ func _build_top_bar(canvas: CanvasLayer) -> void:
 	right_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.add_child(right_spacer)
 
-	var menu_btn := Button.new()
-	menu_btn.text = "☰"
-	menu_btn.pressed.connect(_on_menu_pressed)
-	hbox.add_child(menu_btn)
+	# 설정 (X) 버튼
+	var settings_btn := Button.new()
+	settings_btn.text = "X"
+	settings_btn.pressed.connect(_on_settings_pressed)
+	hbox.add_child(settings_btn)
 
 
-func _build_menu_popup(canvas: CanvasLayer) -> void:
-	_menu_popup = HudMenuPopup.new()
-	canvas.add_child(_menu_popup)
-	_menu_popup.add_item("전투 테스트", _on_combat_pressed)
-	_menu_popup.add_item("타이틀로", _on_title_pressed)
+func _build_pause_menu(canvas: CanvasLayer) -> void:
+	_pause_menu = PauseMenuPopup.new()
+	canvas.add_child(_pause_menu)
+	_pause_menu.setup([
+		{"label": "타이틀로", "callback": _on_title_pressed},
+		{"label": "종료하기", "callback": _on_quit_pressed},
+	])
 
 
 # ============================================================
@@ -220,10 +236,11 @@ func _set_marker_position(pos: Vector2) -> void:
 
 
 func _on_marker_arrived() -> void:
-	for zone: VillageZone in _zone_layer.get_children():
-		if zone.check_marker_overlap(_marker.position):
-			_enter_combat(zone)
-			return
+	pass  # 이제 area_entered 시그널로 자동 감지하므로 불필요 (Tween 완료 알림용)
+
+
+func _on_zone_entered(zone: VillageZone) -> void:
+	_enter_combat(zone)
 
 
 func _enter_combat(zone: VillageZone) -> void:
@@ -277,8 +294,9 @@ func _on_pause_pressed() -> void:
 	_pause_btn.text = "▶" if get_tree().paused else "⏸"
 
 
-func _on_menu_pressed() -> void:
-	_menu_popup.toggle()
+func _on_settings_pressed() -> void:
+	_pause_menu.toggle()
+	get_tree().paused = _pause_menu.visible
 
 
 func _on_combat_pressed() -> void:
@@ -287,3 +305,7 @@ func _on_combat_pressed() -> void:
 
 func _on_title_pressed() -> void:
 	ScreenManager.change_screen(ScreenManager.Screen.TITLE)
+
+
+func _on_quit_pressed() -> void:
+	get_tree().quit()
