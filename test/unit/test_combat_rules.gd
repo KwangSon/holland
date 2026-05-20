@@ -9,7 +9,7 @@ func _make_unit(overrides: Dictionary = {}) -> CombatUnit:
 		"position": Vector2i(0, 0),
 		"max_hp": 30,
 		"max_fatigue": 100,
-		"attack_power": 10,
+		"damage": 10,
 	}
 	defaults.merge(overrides, true)
 	return CombatUnit.create(defaults)
@@ -27,7 +27,7 @@ func _make_rng(rng_seed: int) -> RandomNumberGenerator:
 
 
 func test_roll_attack_deterministic_with_same_seed() -> void:
-	var atk := _make_unit({"attack_power": 15})
+	var atk := _make_unit({"damage": 15})
 	var def1 := _make_unit({"id": "d1", "team": "enemy"})
 	var def2 := _make_unit({"id": "d2", "team": "enemy"})
 	var result1 := CombatRules.roll_attack(atk, def1, _make_rng(42))
@@ -52,7 +52,7 @@ func test_roll_attack_does_not_modify_units() -> void:
 
 
 func test_apply_hit_reduces_hp() -> void:
-	var atk := _make_unit({"attack_power": 10})
+	var atk := _make_unit({"damage": 10})
 	var def := _make_unit({"id": "d1", "team": "enemy", "hp": 30, "max_hp": 30})
 	var result := CombatRules.roll_attack(atk, def, _make_rng(1))
 	CombatRules.apply_attack_result(def, result)

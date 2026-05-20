@@ -261,6 +261,7 @@ func _build_pause_menu(canvas: CanvasLayer) -> void:
 		_pause_menu
 		. setup(
 			[
+				{"label": "닫기", "callback": _on_close_pressed},
 				{"label": "타이틀로", "callback": _on_back_pressed},
 				{"label": "종료하기", "callback": _on_quit_pressed},
 			]
@@ -497,7 +498,15 @@ func _on_unit_draw() -> void:
 		# Active unit gets a brighter tint.
 		if active != null and unit.id == active.id:
 			color = color.lightened(0.35)
-		_unit_layer.draw_circle(pos, 12.0, color)
+
+		# Draw sprite texture if available
+		if unit.sprite_texture:
+			var sprite_size := Vector2(24, 24)
+			var rect := Rect2(pos - sprite_size / 2.0, sprite_size)
+			_unit_layer.draw_texture_rect(unit.sprite_texture, rect, false, color)
+		else:
+			_unit_layer.draw_circle(pos, 12.0, color)
+
 		# HP bar
 		var bar_width: float = 24.0
 		var bar_height: float = 4.0
@@ -573,7 +582,7 @@ func _refresh_ui() -> void:
 			active.max_hp,
 			active.fatigue,
 			active.max_fatigue,
-			active.attack_power,
+			active.damage,
 		]
 	)
 
@@ -618,6 +627,11 @@ func _on_flee_pressed() -> void:
 	_bottom_panel.visible = false
 	_result_label.text = "도망쳤습니다... (패배)"
 	_result_panel.visible = true
+
+
+func _on_close_pressed() -> void:
+	_pause_menu.hide_menu()
+	get_tree().paused = false
 
 
 func _on_settings_pressed() -> void:

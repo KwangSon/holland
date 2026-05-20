@@ -21,7 +21,7 @@ const VILLAGE_ZONES: Array[Dictionary] = [
 					"position": Vector2i(7, 3),
 					"max_hp": 30,
 					"max_fatigue": 90,
-					"attack_power": 10,
+					"damage": 10,
 					"is_ai": true,
 				},
 				{
@@ -31,7 +31,7 @@ const VILLAGE_ZONES: Array[Dictionary] = [
 					"position": Vector2i(6, 4),
 					"max_hp": 55,
 					"max_fatigue": 110,
-					"attack_power": 14,
+					"damage": 14,
 					"is_ai": true,
 				},
 			],
@@ -52,7 +52,7 @@ const VILLAGE_ZONES: Array[Dictionary] = [
 					"position": Vector2i(7, 3),
 					"max_hp": 25,
 					"max_fatigue": 80,
-					"attack_power": 12,
+					"damage": 12,
 					"is_ai": true,
 				},
 				{
@@ -62,7 +62,7 @@ const VILLAGE_ZONES: Array[Dictionary] = [
 					"position": Vector2i(7, 5),
 					"max_hp": 20,
 					"max_fatigue": 70,
-					"attack_power": 15,
+					"damage": 15,
 					"is_ai": true,
 				},
 				{
@@ -72,7 +72,7 @@ const VILLAGE_ZONES: Array[Dictionary] = [
 					"position": Vector2i(6, 4),
 					"max_hp": 35,
 					"max_fatigue": 100,
-					"attack_power": 18,
+					"damage": 18,
 					"is_ai": true,
 				},
 			],
@@ -89,6 +89,8 @@ var _zone_layer: Node2D
 
 var _pause_btn: Button
 var _pause_menu: PauseMenuPopup
+var _mercenary_btn: Button
+var _mercenary_popup: MercenaryPopup
 
 
 func _ready() -> void:
@@ -168,6 +170,7 @@ func _setup_ui() -> void:
 	add_child(canvas)
 	_build_top_bar(canvas)
 	_build_pause_menu(canvas)
+	_build_mercenary_popup(canvas)
 
 
 func _build_top_bar(canvas: CanvasLayer) -> void:
@@ -194,6 +197,12 @@ func _build_top_bar(canvas: CanvasLayer) -> void:
 	right_spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	hbox.add_child(right_spacer)
 
+	# 용병단 버튼 (X 버튼 왼쪽)
+	_mercenary_btn = Button.new()
+	_mercenary_btn.text = "용병단"
+	_mercenary_btn.pressed.connect(_on_mercenary_pressed)
+	hbox.add_child(_mercenary_btn)
+
 	# 설정 (X) 버튼
 	var settings_btn := Button.new()
 	settings_btn.text = "X"
@@ -208,11 +217,17 @@ func _build_pause_menu(canvas: CanvasLayer) -> void:
 		_pause_menu
 		. setup(
 			[
+				{"label": "닫기", "callback": _on_close_pressed},
 				{"label": "타이틀로", "callback": _on_title_pressed},
 				{"label": "종료하기", "callback": _on_quit_pressed},
 			]
 		)
 	)
+
+
+func _build_mercenary_popup(canvas: CanvasLayer) -> void:
+	_mercenary_popup = MercenaryPopup.new()
+	canvas.add_child(_mercenary_popup)
 
 
 # ============================================================
@@ -266,7 +281,7 @@ func _enter_combat(zone: VillageZone) -> void:
 				"position": Vector2i(1, 3),
 				"max_hp": 60,
 				"max_fatigue": 120,
-				"attack_power": 15,
+				"damage": 15,
 			},
 			{
 				"id": "p2",
@@ -275,7 +290,7 @@ func _enter_combat(zone: VillageZone) -> void:
 				"position": Vector2i(2, 4),
 				"max_hp": 30,
 				"max_fatigue": 80,
-				"attack_power": 12,
+				"damage": 12,
 				"is_ai": true,
 			},
 		]
@@ -297,6 +312,11 @@ func _on_marker_draw() -> void:
 # ============================================================
 
 
+func _on_close_pressed() -> void:
+	_pause_menu.hide_menu()
+	get_tree().paused = false
+
+
 func _on_pause_pressed() -> void:
 	get_tree().paused = not get_tree().paused
 	_pause_btn.text = "▶" if get_tree().paused else "⏸"
@@ -305,6 +325,109 @@ func _on_pause_pressed() -> void:
 func _on_settings_pressed() -> void:
 	_pause_menu.toggle()
 	get_tree().paused = _pause_menu.visible
+
+
+func _on_mercenary_pressed() -> void:
+	# 데이터 준비
+	var party_data: Array = _get_party_from_rna()
+	var inventory_data: Array = _get_inventory_from_rna()
+
+	# 팝업에 데이터 전달 및 표시
+	_mercenary_popup.setup(party_data, inventory_data)
+	_mercenary_popup.show_popup()
+	get_tree().paused = true
+
+
+# ============================================================
+# 유틸리티: RNA 데이터 변환
+# ============================================================
+
+
+func _get_party_from_rna() -> Array[CombatUnit]:
+	var party: Array[CombatUnit] = []
+	if not SaveManager.rna.has("party"):
+		# 기본 파티 - 테스트용
+		SaveManager.rna["party"] = [
+			{
+				"id": "p1",
+				"display_name": "기사",
+				"team": "player",
+				"position": Vector2i(1, 3),
+				"max_hp": 60,
+				"max_fatigue": 120,
+				"damage": 15,
+			},
+			{
+				"id": "p2",
+				"display_name": "궁수",
+				"team": "player",
+				"position": Vector2i(2, 4),
+				"max_hp": 30,
+				"max_fatigue": 80,
+				"damage": 12,
+			},
+		]
+
+	for unit_data in SaveManager.rna["party"]:
+		var unit := _unit_from_dict(unit_data)
+		party.append(unit)
+
+	return party
+
+
+func _get_inventory_from_rna() -> Array[Item]:
+	var inventory: Array[Item] = []
+	if SaveManager.rna.has("inventory"):
+		for item_data in SaveManager.rna["inventory"]:
+			var item := Item.create(item_data)
+			inventory.append(item)
+	else:
+		# 테스트용 기본 인벤토리
+		inventory = [
+			Item.longsword(),
+			Item.battle_axe(),
+			Item.bow(),
+			Item.leather_cap(),
+			Item.gambeson(),
+			Item.rangers_boots(),
+		]
+		SaveManager.rna["inventory"] = inventory.map(
+			func(i: Item): return _item_to_dict_for_save(i)
+		)
+
+	return inventory
+
+
+func _unit_from_dict(data: Dictionary) -> CombatUnit:
+	return CombatUnit.create(data)
+
+
+func _item_to_dict_for_save(item: Item) -> Dictionary:
+	if item == null:
+		return {}
+	return {
+		"name": item.name,
+		"type": item.type,
+		"damage": item.damage,
+		"armor_penetration": item.armor_penetration,
+		"chance_to_hit_head": item.chance_to_hit_head,
+		"head_armor": item.head_armor,
+		"body_armor": item.body_armor,
+		"hp": item.hp,
+		"max_hp": item.max_hp,
+		"action_points": item.action_points,
+		"max_action_points": item.max_action_points,
+		"fatigue": item.fatigue,
+		"max_fatigue": item.max_fatigue,
+		"morale": item.morale,
+		"resolve": item.resolve,
+		"initiative": item.initiative,
+		"melee_skill": item.melee_skill,
+		"ranged_skill": item.ranged_skill,
+		"melee_defense": item.melee_defense,
+		"ranged_defense": item.ranged_defense,
+		"vision": item.vision,
+	}
 
 
 func _on_combat_pressed() -> void:

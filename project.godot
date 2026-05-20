@@ -21,6 +21,11 @@ GameManager="*uid://ck3sw6ftvg2tu"
 SaveManager="*uid://cmo2j4so6e20a"
 ScreenManager="*uid://b6x0slwuehr4m"
 
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=800
+
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/gut/plugin.cfg")

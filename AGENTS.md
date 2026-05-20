@@ -31,11 +31,11 @@ This project uses [GDScript Toolkit](https://github.com/Scony/godot-gdscript-too
 #### Running Unit Tests (GUT)
 
 ```bash
-# Run all unit tests
-./godot -d -s --path "$PWD" addons/gut/gut_cmdln.gd
+# Run all unit tests (headless mode)
+./godot --headless -d -s --path "$PWD" addons/gut/gut_cmdln.gd
 
-# Run specific test file
-./godot -d -s --path "$PWD" addons/gut/gut_cmdln.gd -gtest=test_example.gd
+# Run specific test file (headless mode)
+./godot --headless -d -s --path "$PWD" addons/gut/gut_cmdln.gd -gtest=test_example.gd
 ```
 
 ### Best Practices

@@ -40,7 +40,7 @@ static func get_attack_targets(
 static func roll_attack(
 	attacker: CombatUnit, _defender: CombatUnit, _rng: RandomNumberGenerator
 ) -> Dictionary:
-	var raw_damage := attacker.attack_power
+	var raw_damage := attacker.damage
 	var hp_damage := raw_damage
 
 	return {
