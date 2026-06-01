@@ -1,6 +1,46 @@
 [gd_scene format=3 uid="uid://bk441qq13xjgc"]
 
 [ext_resource type="Script" uid="uid://yopwhacjcx7d" path="res://test/manual/test_scene_2.gd" id="1_s32gu"]
+[ext_resource type="Texture2D" uid="uid://7m8oj43ig4sn" path="res://asset/panel.png" id="2_sffsq"]
+[ext_resource type="Texture2D" uid="uid://binfpbf7xhggw" path="res://asset/b_1.png" id="3_3wtgl"]
+[ext_resource type="Texture2D" uid="uid://b1dkf7703n23w" path="res://asset/h_3.png" id="4_pdxuf"]
+[ext_resource type="Texture2D" uid="uid://b5ra360ki30gm" path="res://asset/s_1.png" id="5_jgkjy"]
 
 [node name="TestScene2" type="Node2D" unique_id=104807939]
 script = ExtResource("1_s32gu")
+
+[node name="Samurai" type="Node2D" parent="." unique_id=1609675243]
+
+[node name="Panel" type="Sprite2D" parent="Samurai" unique_id=1666119523]
+texture = ExtResource("2_sffsq")
+
+[node name="B1" type="Sprite2D" parent="Samurai" unique_id=1315463171]
+position = Vector2(0, -80)
+texture = ExtResource("3_3wtgl")
+
+[node name="H3" type="Sprite2D" parent="Samurai" unique_id=812166213]
+position = Vector2(0, -181)
+texture = ExtResource("4_pdxuf")
+
+[node name="S1" type="Sprite2D" parent="Samurai" unique_id=1718242201]
+position = Vector2(74, -59)
+texture = ExtResource("5_jgkjy")
+
+[node name="S2" type="Sprite2D" parent="Samurai" unique_id=989003775]
+position = Vector2(113, -134)
+texture = ExtResource("5_jgkjy")
+
+[node name="S3" type="Sprite2D" parent="Samurai" unique_id=1289554915]
+position = Vector2(182, -195)
+texture = ExtResource("5_jgkjy")
+
+[node name="S4" type="Sprite2D" parent="Samurai" unique_id=1049223846]
+position = Vector2(256, -226)
+texture = ExtResource("5_jgkjy")
+
+[node name="S5" type="Sprite2D" parent="Samurai" unique_id=1337182305]
+position = Vector2(318, -231)
+texture = ExtResource("5_jgkjy")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=1051573889]
+zoom = Vector2(0.5, 0.5)
