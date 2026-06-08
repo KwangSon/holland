@@ -11,6 +11,7 @@ var damage_percent: int = 100
 var armor_damage_percent: int = 100
 var armor_penetration_modifier: int = 0
 var head_hit_modifier: int = 0
+var fatigue_recovery: int = 0
 var tags: Array[String] = []
 
 
@@ -26,6 +27,7 @@ static func create(data: Dictionary):
 	skill.armor_damage_percent = data.get("armor_damage_percent", 100)
 	skill.armor_penetration_modifier = data.get("armor_penetration_modifier", 0)
 	skill.head_hit_modifier = data.get("head_hit_modifier", 0)
+	skill.fatigue_recovery = data.get("fatigue_recovery", 0)
 	skill.tags.assign(data.get("tags", []))
 	return skill
 

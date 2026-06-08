@@ -27,6 +27,7 @@ func test_create_assigns_optional_combat_modifiers() -> void:
 				"armor_damage_percent": 150,
 				"armor_penetration_modifier": 15,
 				"head_hit_modifier": 5,
+				"fatigue_recovery": 20,
 				"tags": ["melee", "heavy"],
 			}
 		)
@@ -37,4 +38,5 @@ func test_create_assigns_optional_combat_modifiers() -> void:
 	assert_eq(skill.armor_damage_percent, 150)
 	assert_eq(skill.armor_penetration_modifier, 15)
 	assert_eq(skill.head_hit_modifier, 5)
+	assert_eq(skill.fatigue_recovery, 20)
 	assert_true("heavy" in skill.tags)

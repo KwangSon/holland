@@ -1,6 +1,7 @@
 class_name CombatRules
 
 const CombatSkillDataScript := preload("res://src/combat/combat_skill_data.gd")
+const CombatSkillRegistryScript := preload("res://src/combat/combat_skill_registry.gd")
 
 const TURN_FATIGUE_RECOVERY: int = 15
 const MIN_HIT_CHANCE: int = 5
@@ -208,7 +209,7 @@ static func _percent_of(value: int, percent: int) -> int:
 
 
 static func get_basic_attack_skill():
-	return CombatSkillDataScript.basic_attack()
+	return CombatSkillRegistryScript.get_skill(CombatSkillRegistryScript.BASIC_ATTACK_ID)
 
 
 static func _skill_or_basic(skill):
