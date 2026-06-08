@@ -9,7 +9,7 @@ const MAX_HIT_CHANCE: int = 95
 
 ## Returns passable cells the unit can move to this turn.
 static func get_legal_moves(unit: CombatUnit, board: CombatBoard) -> Array[Vector2i]:
-	if not unit.alive or unit.has_acted or unit.action_points <= 0:
+	if not unit.alive or unit.action_points <= 0:
 		return []
 	if unit.fatigue >= unit.max_fatigue:
 		return []
@@ -60,7 +60,7 @@ static func get_reachable_by_ap(unit: CombatUnit, board: CombatBoard) -> Array[V
 static func get_attack_targets(
 	attacker: CombatUnit, board: CombatBoard, all_units: Array[CombatUnit]
 ) -> Array[String]:
-	if not attacker.alive or attacker.has_acted:
+	if not attacker.alive:
 		return []
 	if attacker.action_points < BASIC_ATTACK_AP_COST:
 		return []

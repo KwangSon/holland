@@ -58,6 +58,32 @@ func test_move_unit_consumes_path_ap_and_fatigue_without_ending_turn() -> void:
 	assert_eq(state.get_active_unit().id, "p")
 
 
+func test_non_active_unit_cannot_move_or_attack() -> void:
+	var player := _make_unit({"id": "p", "team": "player", "initiative": 40})
+	var enemy := _make_unit(
+		{"id": "e", "team": "enemy", "position": Vector2i(1, 0), "initiative": 10}
+	)
+	var state := _start_state([player], [enemy], [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)])
+
+	assert_false(state.move_unit("e", Vector2i(2, 0)))
+	assert_true(state.attack("e", "p").is_empty())
+	assert_eq(state.get_legal_moves("e").size(), 0)
+	assert_eq(state.get_attack_targets("e").size(), 0)
+
+
+func test_unit_can_move_then_attack_in_same_turn() -> void:
+	var player := _make_unit({"id": "p", "team": "player", "initiative": 40})
+	var enemy := _make_unit({"id": "e", "team": "enemy", "position": Vector2i(2, 0)})
+	var state := _start_state([player], [enemy], [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)])
+
+	assert_true(state.move_unit("p", Vector2i(1, 0)))
+	var result := state.attack("p", "e")
+
+	assert_true(result.has("hit"))
+	assert_eq(player.action_points, 3)
+	assert_eq(player.fatigue, 34)
+
+
 func test_attack_consumes_ap_and_fatigue() -> void:
 	var player := _make_unit({"id": "p", "team": "player", "initiative": 40})
 	var enemy := _make_unit({"id": "e", "team": "enemy", "position": Vector2i(1, 0)})
@@ -67,6 +93,29 @@ func test_attack_consumes_ap_and_fatigue() -> void:
 	assert_true(result.has("hit"))
 	assert_eq(player.action_points, 5)
 	assert_eq(player.fatigue, 30)
+
+
+func test_unit_can_attack_multiple_times_while_ap_and_fatigue_allow() -> void:
+	var player := _make_unit({"id": "p", "team": "player", "initiative": 40})
+	var enemy := _make_unit({"id": "e", "team": "enemy", "position": Vector2i(1, 0), "max_hp": 40})
+	var state := _start_state([player], [enemy], [Vector2i(0, 0), Vector2i(1, 0)])
+
+	assert_true(state.attack("p", "e").has("hit"))
+	assert_true(state.attack("p", "e").has("hit"))
+
+	assert_eq(player.action_points, 1)
+	assert_eq(player.fatigue, 60)
+
+
+func test_attack_requires_enough_ap() -> void:
+	var player := _make_unit(
+		{"id": "p", "team": "player", "initiative": 40, "max_action_points": 3}
+	)
+	var enemy := _make_unit({"id": "e", "team": "enemy", "position": Vector2i(1, 0)})
+	var state := _start_state([player], [enemy], [Vector2i(0, 0), Vector2i(1, 0)])
+
+	assert_eq(state.get_attack_targets("p").size(), 0)
+	assert_true(state.attack("p", "e").is_empty())
 
 
 func test_end_turn_starts_next_unit_with_ap_reset_and_fatigue_recovery() -> void:
@@ -88,3 +137,24 @@ func test_end_turn_starts_next_unit_with_ap_reset_and_fatigue_recovery() -> void
 	assert_eq(state.get_active_unit().id, "e")
 	assert_eq(enemy.action_points, 9)
 	assert_eq(enemy.fatigue, 5)
+
+
+func test_wait_turn_does_not_reset_waiting_unit_when_it_returns_same_round() -> void:
+	var first := _make_unit({"id": "p1", "team": "player", "initiative": 50, "action_points": 3})
+	var second := _make_unit(
+		{"id": "p2", "team": "player", "position": Vector2i(1, 0), "initiative": 40}
+	)
+	var enemy := _make_unit(
+		{"id": "e", "team": "enemy", "position": Vector2i(2, 0), "initiative": 10}
+	)
+	var state := _start_state(
+		[first, second], [enemy], [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)]
+	)
+	first.action_points = 3
+
+	state.wait_turn()
+	assert_eq(state.get_active_unit().id, "p2")
+
+	state.end_turn()
+	assert_eq(state.get_active_unit().id, "p1")
+	assert_eq(first.action_points, 3)

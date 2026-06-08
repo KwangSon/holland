@@ -5,6 +5,7 @@ var round_number: int = 1
 var _board: CombatBoard
 var _units: Dictionary = {}  # unit_id → CombatUnit
 var _turn_order: Array[String] = []  # unit_ids sorted by initiative
+var _turn_started_round: Dictionary = {}  # unit_id → round_number
 var _turn_index: int = 0
 var _rng: RandomNumberGenerator
 
@@ -22,6 +23,7 @@ func start_encounter(
 	_rng.seed = encounter_seed
 
 	_units.clear()
+	_turn_started_round.clear()
 	var all: Array[CombatUnit] = []
 	for unit: CombatUnit in player_units:
 		_units[unit.id] = unit
@@ -34,7 +36,7 @@ func start_encounter(
 
 	_build_turn_order(all)
 	_turn_index = 0
-	_get_active_ref().begin_turn(0)
+	_start_unit_turn(_get_active_ref(), 0)
 
 
 func get_active_unit() -> CombatUnit:
@@ -56,21 +58,21 @@ func get_board() -> CombatBoard:
 
 func get_legal_moves(unit_id: String) -> Array[Vector2i]:
 	var unit: CombatUnit = _units.get(unit_id, null)
-	if unit == null:
+	if unit == null or not _is_active_unit_id(unit_id):
 		return []
 	return CombatRules.get_legal_moves(unit, _board)
 
 
 func get_attack_targets(unit_id: String) -> Array[String]:
 	var unit: CombatUnit = _units.get(unit_id, null)
-	if unit == null:
+	if unit == null or not _is_active_unit_id(unit_id):
 		return []
 	return CombatRules.get_attack_targets(unit, _board, get_all_units())
 
 
 func move_unit(unit_id: String, target: Vector2i) -> bool:
 	var unit: CombatUnit = _units.get(unit_id, null)
-	if unit == null or not unit.alive or unit.has_acted:
+	if unit == null or not unit.alive or not _is_active_unit_id(unit_id):
 		return false
 	if not target in CombatRules.get_legal_moves(unit, _board):
 		return false
@@ -86,8 +88,6 @@ func move_unit(unit_id: String, target: Vector2i) -> bool:
 	_board.set_occupied(target, unit_id)
 	unit.action_points -= ap_cost
 	unit.fatigue += fatigue_cost
-	if unit.action_points <= 0 or unit.fatigue >= unit.max_fatigue:
-		unit.has_acted = true
 	return true
 
 
@@ -97,7 +97,7 @@ func attack(attacker_id: String, defender_id: String) -> Dictionary:
 	var defender: CombatUnit = _units.get(defender_id, null)
 	if attacker == null or defender == null:
 		return {}
-	if not attacker.alive or not defender.alive or attacker.has_acted:
+	if not attacker.alive or not defender.alive or not _is_active_unit_id(attacker_id):
 		return {}
 	if not defender_id in CombatRules.get_attack_targets(attacker, _board, get_all_units()):
 		return {}
@@ -107,8 +107,6 @@ func attack(attacker_id: String, defender_id: String) -> Dictionary:
 	result["killed"] = not defender.alive
 	attacker.action_points -= CombatRules.BASIC_ATTACK_AP_COST
 	attacker.fatigue += CombatRules.ATTACK_FATIGUE_COST
-	if attacker.action_points <= 0 or attacker.fatigue >= attacker.max_fatigue:
-		attacker.has_acted = true
 
 	if not defender.alive:
 		_board.clear_occupied(defender.position)
@@ -133,7 +131,7 @@ func end_turn() -> void:
 		_turn_index += 1
 	var active := get_active_unit()
 	if active != null:
-		active.begin_turn(CombatRules.TURN_FATIGUE_RECOVERY)
+		_start_unit_turn(active, CombatRules.TURN_FATIGUE_RECOVERY)
 
 
 ## Returns units of the given team remaining to act in the current turn cycle.
@@ -166,7 +164,7 @@ func wait_turn() -> void:
 	_turn_order.insert(last_player_pos, current_id)
 	var next := get_active_unit()
 	if next != null:
-		next.has_acted = false
+		_start_unit_turn(next, CombatRules.TURN_FATIGUE_RECOVERY)
 
 
 ## Skips all remaining player turns and advances to the next enemy unit.
@@ -185,10 +183,11 @@ func end_player_phase() -> void:
 			break
 	if not found:
 		round_number += 1
+		_build_turn_order(_get_living_units())
 		_turn_index = 0
 	var next := get_active_unit()
 	if next != null:
-		next.has_acted = false
+		_start_unit_turn(next, CombatRules.TURN_FATIGUE_RECOVERY)
 
 
 func get_outcome() -> String:
@@ -220,6 +219,20 @@ func _get_living_units() -> Array[CombatUnit]:
 		if unit.alive:
 			result.append(unit)
 	return result
+
+
+func _is_active_unit_id(unit_id: String) -> bool:
+	var active := get_active_unit()
+	return active != null and active.id == unit_id
+
+
+func _start_unit_turn(unit: CombatUnit, fatigue_recovery: int) -> void:
+	if unit == null:
+		return
+	if _turn_started_round.get(unit.id, 0) == round_number:
+		return
+	unit.begin_turn(fatigue_recovery)
+	_turn_started_round[unit.id] = round_number
 
 
 func _get_active_ref() -> CombatUnit:
