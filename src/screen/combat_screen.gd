@@ -428,6 +428,7 @@ func _handle_cell_click(cell: Vector2i) -> void:
 					_move_unit_along_path(active, move_path)
 				else:
 					_state.move_unit(active.id, cell)
+					_log_move_result(active)
 				_deselect()
 				return
 
@@ -528,14 +529,34 @@ func _on_unit_draw() -> void:
 		var bar_width: float = 24.0
 		var bar_height: float = 4.0
 		var hp_ratio: float = clamp(float(unit.hp) / float(unit.max_hp), 0.0, 1.0)
+		var head_ratio: float = _safe_ratio(unit.head_armor, unit.max_head_armor)
+		var body_ratio: float = _safe_ratio(unit.body_armor, unit.max_body_armor)
 
-		# Background (dark gray)
+		# Head armor (steel blue)
+		_unit_layer.draw_rect(
+			Rect2(pos.x - bar_width / 2.0, pos.y - 26.0, bar_width, bar_height),
+			Color(0.18, 0.22, 0.28)
+		)
+		_unit_layer.draw_rect(
+			Rect2(pos.x - bar_width / 2.0, pos.y - 26.0, bar_width * head_ratio, bar_height),
+			Color(0.45, 0.65, 0.9)
+		)
+
+		# Body armor (gray)
+		_unit_layer.draw_rect(
+			Rect2(pos.x - bar_width / 2.0, pos.y - 22.0, bar_width, bar_height),
+			Color(0.18, 0.22, 0.28)
+		)
+		_unit_layer.draw_rect(
+			Rect2(pos.x - bar_width / 2.0, pos.y - 22.0, bar_width * body_ratio, bar_height),
+			Color(0.72, 0.74, 0.78)
+		)
+
+		# HP (red)
 		_unit_layer.draw_rect(
 			Rect2(pos.x - bar_width / 2.0, pos.y - 18.0, bar_width, bar_height),
 			Color(0.2, 0.2, 0.2)
 		)
-
-		# Current HP (red)
 		_unit_layer.draw_rect(
 			Rect2(pos.x - bar_width / 2.0, pos.y - 18.0, bar_width * hp_ratio, bar_height),
 			Color(0.9, 0.2, 0.2)
@@ -593,10 +614,16 @@ func _refresh_ui() -> void:
 
 	_unit_name_label.text = active.display_name
 	_unit_stats_label.text = (
-		"HP %d/%d  피로도 %d/%d  공격력 %d"
+		"HP %d/%d  머리갑 %d/%d  몸갑 %d/%d  AP %d/%d  피로도 %d/%d  공격력 %d"
 		% [
 			active.hp,
 			active.max_hp,
+			active.head_armor,
+			active.max_head_armor,
+			active.body_armor,
+			active.max_body_armor,
+			active.action_points,
+			active.max_action_points,
 			active.fatigue,
 			active.max_fatigue,
 			active.damage,
@@ -608,12 +635,44 @@ func _log_attack(result: Dictionary, defender_id: String) -> void:
 	var defender := _find_unit(defender_id)
 	var name_str := defender.display_name if defender != null else defender_id
 	if result.get("hit", false):
-		var msg := "공격 → %s  피해 %d" % [name_str, result.get("hp_damage", 0)]
+		var part := "머리" if result.get("body_part", "body") == "head" else "몸"
+		var msg := (
+			"공격 → %s %s  갑옷 %d  HP %d"
+			% [
+				name_str,
+				part,
+				result.get("armor_damage", 0),
+				result.get("hp_damage", 0),
+			]
+		)
 		if result.get("killed", false):
 			msg += "  [사망]"
 		_log_label.text = msg
 	else:
 		_log_label.text = "공격 → %s  빗나감" % [name_str]
+
+
+func _log_move_result(unit: CombatUnit) -> void:
+	var move_result := _state.get_last_move_result()
+	var zoc_attacks: Array = move_result.get("zoc_attacks", [])
+	if zoc_attacks.is_empty():
+		return
+	var attack: Dictionary = zoc_attacks[-1]
+	var attacker := _find_unit(attack.get("attacker_id", ""))
+	var attacker_name: String = (
+		attacker.display_name if attacker != null else attack.get("attacker_id", "")
+	)
+	if move_result.get("blocked_by_zoc", false):
+		_log_label.text = (
+			"%s 이탈 저지 ← %s  HP %d"
+			% [
+				unit.display_name,
+				attacker_name,
+				attack.get("hp_damage", 0),
+			]
+		)
+	else:
+		_log_label.text = "%s 이탈 성공  %d회 회피" % [unit.display_name, zoc_attacks.size()]
 
 
 # ============================================================
@@ -765,6 +824,7 @@ func _run_ai_turn(active: CombatUnit) -> void:
 			_move_unit_along_path(active, path)
 		else:
 			_state.move_unit(active.id, best_move)
+			_log_move_result(active)
 			_refresh_overlays()
 			_refresh_ui()
 		await get_tree().create_timer(0.5).timeout
@@ -818,11 +878,18 @@ func _find_unit(uid: String) -> CombatUnit:
 	return null
 
 
+func _safe_ratio(value: int, max_value: int) -> float:
+	if max_value <= 0:
+		return 0.0
+	return clamp(float(value) / float(max_value), 0.0, 1.0)
+
+
 ## Move unit along path with tween animation (non-blocking)
 func _move_unit_along_path(unit: CombatUnit, path: Array[Vector2i]) -> void:
 	if path.size() < 2:
 		# Instant move if no path
 		_state.move_unit(unit.id, path[0])
+		_log_move_result(unit)
 		_refresh_overlays()
 		_refresh_ui()
 		return
@@ -846,8 +913,9 @@ func _move_unit_along_path(unit: CombatUnit, path: Array[Vector2i]) -> void:
 	# Update state after animation completes
 	tween.finished.connect(
 		func():
-			_state.move_unit(unit.id, dest)
-			unit.visual_position = dest_pos
+			var moved := _state.move_unit(unit.id, dest)
+			_log_move_result(unit)
+			unit.visual_position = dest_pos if moved else _cell_to_local(unit.position)
 			_refresh_overlays()
 			_refresh_ui()
 	)

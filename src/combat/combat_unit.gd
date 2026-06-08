@@ -33,6 +33,8 @@ var base_vision: int = 0
 # === Effective Stats (with equipment) ===
 var head_armor: int = 0
 var body_armor: int = 0
+var max_head_armor: int = 0
+var max_body_armor: int = 0
 var hp: int = 0
 var max_hp: int = 0
 var action_points: int = 0
@@ -144,6 +146,8 @@ func recalculate_stats() -> void:
 	_apply_item_bonus(head_armor_item)
 	_apply_item_bonus(body_armor_item)
 	_apply_item_bonus(accessory)
+	max_head_armor = head_armor
+	max_body_armor = body_armor
 
 
 func _apply_item_bonus(item) -> void:

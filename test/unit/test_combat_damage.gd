@@ -44,6 +44,12 @@ func test_body_armor_absorbs_damage_before_hp() -> void:
 	assert_eq(defender.hp, 30)
 
 
+func test_unit_tracks_max_armor_for_display() -> void:
+	var unit := _make_unit({"head_armor": 12, "body_armor": 20})
+	assert_eq(unit.max_head_armor, 12)
+	assert_eq(unit.max_body_armor, 20)
+
+
 func test_armor_penetration_deals_reduced_hp_damage_through_armor() -> void:
 	var attacker := _make_unit({"damage": 10, "armor_penetration": 50})
 	var defender := _make_unit({"id": "d", "team": "enemy", "body_armor": 20})
