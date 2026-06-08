@@ -1,10 +1,15 @@
 class_name CombatBoard
 
+const CombatTileDataScript := preload("res://src/combat/combat_tile_data.gd")
+
 ## Vector2i → unit_id (String) for occupied cells.
 var occupied: Dictionary = {}
 
 ## Vector2i → true for all valid (non-empty) cells.
 var _valid: Dictionary = {}
+
+## Vector2i → CombatTileData.
+var _tiles: Dictionary = {}
 
 ## AStar2D for pathfinding
 var _astar: AStar2D = null
@@ -12,10 +17,24 @@ var _astar: AStar2D = null
 
 func setup(valid_cells: Array[Vector2i]) -> void:
 	_valid.clear()
+	_tiles.clear()
 	occupied.clear()
 	for cell: Vector2i in valid_cells:
 		_valid[cell] = true
+		_tiles[cell] = CombatTileDataScript.new()
 	_build_astar(valid_cells)
+
+
+func setup_tiles(tile_data_by_cell: Dictionary) -> void:
+	_valid.clear()
+	_tiles.clear()
+	occupied.clear()
+	for cell: Vector2i in tile_data_by_cell.keys():
+		var tile_data = tile_data_by_cell[cell]
+		var tile = _create_tile_data(tile_data)
+		_valid[cell] = true
+		_tiles[cell] = tile
+	_build_astar(_valid.keys())
 
 
 func is_valid(cell: Vector2i) -> bool:
@@ -24,7 +43,29 @@ func is_valid(cell: Vector2i) -> bool:
 
 ## A cell is passable if it is valid and not occupied by another unit.
 func is_passable(cell: Vector2i) -> bool:
-	return _valid.has(cell) and not occupied.has(cell)
+	return _valid.has(cell) and not occupied.has(cell) and not get_tile_data(cell).is_blocked()
+
+
+func get_tile_data(cell: Vector2i):
+	assert(is_valid(cell), "CombatBoard: invalid cell %s" % cell)
+	return _tiles[cell]
+
+
+func get_height(cell: Vector2i) -> int:
+	return get_tile_data(cell).height
+
+
+func set_height(cell: Vector2i, height: int) -> void:
+	get_tile_data(cell).set_height(height)
+
+
+func get_terrain(cell: Vector2i) -> int:
+	return get_tile_data(cell).terrain
+
+
+func set_terrain(cell: Vector2i, terrain: int) -> void:
+	get_tile_data(cell).terrain = terrain
+	_build_astar(_valid.keys())
 
 
 ## Returns all valid neighboring cells using flat-top offset coordinates
@@ -87,6 +128,16 @@ func clear_occupied(cell: Vector2i) -> void:
 	occupied.erase(cell)
 
 
+func _create_tile_data(data):
+	if data is CombatTileDataScript:
+		return data
+
+	var tile = CombatTileDataScript.new()
+	tile.terrain = data.get("terrain", CombatTileDataScript.TerrainType.PLAIN)
+	tile.set_height(data.get("height", CombatTileDataScript.MIN_HEIGHT))
+	return tile
+
+
 func _to_cube(cell: Vector2i) -> Vector3i:
 	# odd-q vertical layout: q = x, r = y - floor(x/2), s = -q - r
 	var q := cell.x
@@ -96,20 +147,25 @@ func _to_cube(cell: Vector2i) -> Vector3i:
 
 
 ## Build AStar2D graph for pathfinding
-func _build_astar(valid_cells: Array[Vector2i]) -> void:
+func _build_astar(valid_cells: Array) -> void:
 	_astar = AStar2D.new()
 
-	# Add all valid cells as points
+	# Add all unblocked cells as points.
 	for cell: Vector2i in valid_cells:
+		if get_tile_data(cell).is_blocked():
+			continue
 		var id := _cell_to_id(cell)
 		_astar.add_point(id, Vector2(cell.x, cell.y))
 
 	# Connect adjacent cells (bidirectional)
 	for cell: Vector2i in valid_cells:
 		var id := _cell_to_id(cell)
+		if not _astar.has_point(id):
+			continue
 		for neighbor: Vector2i in get_neighbors(cell):
 			var neighbor_id := _cell_to_id(neighbor)
-			_astar.connect_points(id, neighbor_id, true)
+			if _astar.has_point(neighbor_id) and not _astar.are_points_connected(id, neighbor_id):
+				_astar.connect_points(id, neighbor_id, true)
 
 
 ## Convert cell to unique ID for AStar2D

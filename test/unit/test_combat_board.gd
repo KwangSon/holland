@@ -1,9 +1,17 @@
 extends GutTest
 
+const CombatTileDataScript := preload("res://src/combat/combat_tile_data.gd")
+
 
 func _make_board(cells: Array[Vector2i]) -> CombatBoard:
 	var board := CombatBoard.new()
 	board.setup(cells)
+	return board
+
+
+func _make_tile_board(tile_data_by_cell: Dictionary) -> CombatBoard:
+	var board := CombatBoard.new()
+	board.setup_tiles(tile_data_by_cell)
 	return board
 
 
@@ -41,6 +49,38 @@ func test_clear_occupied_restores_passable() -> void:
 	board.set_occupied(Vector2i(3, 2), "u1")
 	board.clear_occupied(Vector2i(3, 2))
 	assert_true(board.is_passable(Vector2i(3, 2)))
+
+
+func test_setup_creates_plain_height_zero_tiles() -> void:
+	var board := _make_board([Vector2i(3, 2)])
+	assert_eq(board.get_terrain(Vector2i(3, 2)), CombatTileDataScript.TerrainType.PLAIN)
+	assert_eq(board.get_height(Vector2i(3, 2)), 0)
+
+
+func test_setup_tiles_keeps_terrain_and_height() -> void:
+	var board := _make_tile_board(
+		{
+			Vector2i(3, 2): {"terrain": CombatTileDataScript.TerrainType.ROUGH, "height": 2},
+		}
+	)
+	assert_eq(board.get_terrain(Vector2i(3, 2)), CombatTileDataScript.TerrainType.ROUGH)
+	assert_eq(board.get_height(Vector2i(3, 2)), 2)
+
+
+func test_set_height_updates_existing_tile() -> void:
+	var board := _make_board([Vector2i(3, 2)])
+	board.set_height(Vector2i(3, 2), 3)
+	assert_eq(board.get_height(Vector2i(3, 2)), 3)
+
+
+func test_blocked_tile_is_valid_but_not_passable() -> void:
+	var board := _make_tile_board(
+		{
+			Vector2i(3, 2): {"terrain": CombatTileDataScript.TerrainType.BLOCKED, "height": 0},
+		}
+	)
+	assert_true(board.is_valid(Vector2i(3, 2)))
+	assert_false(board.is_passable(Vector2i(3, 2)))
 
 
 # ----------------------------------------------------------
