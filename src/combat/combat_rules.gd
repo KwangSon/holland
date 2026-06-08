@@ -5,6 +5,7 @@ const CombatSkillDataScript := preload("res://src/combat/combat_skill_data.gd")
 const TURN_FATIGUE_RECOVERY: int = 15
 const MIN_HIT_CHANCE: int = 5
 const MAX_HIT_CHANCE: int = 95
+const SURROUND_DEFENSE_PENALTY_PER_UNIT: int = 5
 const ARMOR_DAMAGE_PERCENT: int = 100
 const ARMOR_HP_DAMAGE_REDUCTION_PERCENT: int = 10
 const HEAD_HP_DAMAGE_PERCENT: int = 150
@@ -110,10 +111,11 @@ static func roll_attack(
 	defender: CombatUnit,
 	rng: RandomNumberGenerator,
 	board: CombatBoard = null,
-	skill = null
+	skill = null,
+	all_units: Array[CombatUnit] = []
 ) -> Dictionary:
 	var attack_skill = _skill_or_basic(skill)
-	var hit_chance: int = calculate_hit_chance(attacker, defender, board, attack_skill)
+	var hit_chance: int = calculate_hit_chance(attacker, defender, board, attack_skill, all_units)
 	var roll := rng.randi_range(1, 100)
 	var hit := roll <= hit_chance
 	var body_part := "body"
@@ -137,13 +139,18 @@ static func roll_attack(
 
 
 static func calculate_hit_chance(
-	attacker: CombatUnit, defender: CombatUnit, board: CombatBoard = null, skill = null
+	attacker: CombatUnit,
+	defender: CombatUnit,
+	board: CombatBoard = null,
+	skill = null,
+	all_units: Array[CombatUnit] = []
 ) -> int:
 	var attack_skill = _skill_or_basic(skill)
 	var defense: int = defender.melee_defense
 	if defense > 50:
 		@warning_ignore("integer_division")
 		defense = 50 + ((defense - 50) / 2)
+	defense = maxi(0, defense - _get_surround_defense_penalty(attacker, defender, board, all_units))
 	var chance: int = attacker.melee_skill - defense + attack_skill.hit_modifier
 	if board != null:
 		var height_delta := (
@@ -214,6 +221,22 @@ static func _is_target_in_skill_range(
 	if skill.attack_range <= 1:
 		return board.is_melee_reachable(attacker.position, defender.position)
 	return board.hex_distance(attacker.position, defender.position) <= skill.attack_range
+
+
+static func _get_surround_defense_penalty(
+	attacker: CombatUnit, defender: CombatUnit, board: CombatBoard, all_units: Array[CombatUnit]
+) -> int:
+	if board == null or all_units.is_empty():
+		return 0
+	var supporting_attackers := 0
+	for unit: CombatUnit in all_units:
+		if unit.id == attacker.id or unit.id == defender.id:
+			continue
+		if unit.team != attacker.team or not unit.alive:
+			continue
+		if board.is_melee_reachable(unit.position, defender.position):
+			supporting_attackers += 1
+	return supporting_attackers * SURROUND_DEFENSE_PENALTY_PER_UNIT
 
 
 static func get_path_ap_cost(path: Array[Vector2i], unit: CombatUnit, board: CombatBoard) -> int:

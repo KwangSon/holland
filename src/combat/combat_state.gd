@@ -132,7 +132,7 @@ func attack(attacker_id: String, defender_id: String) -> Dictionary:
 	if not defender_id in CombatRules.get_attack_targets(attacker, _board, get_all_units(), skill):
 		return {}
 
-	var result := CombatRules.roll_attack(attacker, defender, _rng, _board, skill)
+	var result := CombatRules.roll_attack(attacker, defender, _rng, _board, skill, get_all_units())
 	CombatRules.apply_attack_result(defender, result)
 	result["killed"] = not defender.alive
 	attacker.action_points -= skill.action_point_cost
@@ -268,7 +268,9 @@ func _resolve_zoc_escape_attacks(unit: CombatUnit, path: Array[Vector2i]) -> Dic
 			unit, step_from, all_units, _board
 		)
 		for controller: CombatUnit in controllers:
-			var attack_result := CombatRules.roll_attack(controller, unit, _rng, _board)
+			var attack_result := CombatRules.roll_attack(
+				controller, unit, _rng, _board, null, all_units
+			)
 			CombatRules.apply_attack_result(unit, attack_result)
 			attack_result["attacker_id"] = controller.id
 			attack_result["defender_id"] = unit.id

@@ -268,3 +268,52 @@ func test_skill_hit_modifier_changes_hit_chance() -> void:
 	var defender := _make_unit({"id": "d", "team": "enemy", "melee_defense": 20})
 	var skill = CombatSkillDataScript.create({"id": "accurate", "hit_modifier": 15})
 	assert_eq(CombatRules.calculate_hit_chance(attacker, defender, null, skill), 55)
+
+
+func test_surrounding_ally_reduces_defender_melee_defense() -> void:
+	var board := CombatBoard.new()
+	board.setup([Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)])
+	var attacker := _make_unit({"id": "a", "position": Vector2i(0, 0), "melee_skill": 60})
+	var defender := _make_unit(
+		{"id": "d", "team": "enemy", "position": Vector2i(1, 0), "melee_defense": 20}
+	)
+	var supporter := _make_unit({"id": "s", "position": Vector2i(2, 0)})
+	assert_eq(
+		CombatRules.calculate_hit_chance(
+			attacker, defender, board, null, [attacker, defender, supporter]
+		),
+		45
+	)
+
+
+func test_surrounding_penalty_ignores_allies_dead_units_and_unreachable_units() -> void:
+	var board := CombatBoard.new()
+	(
+		board
+		. setup_tiles(
+			{
+				Vector2i(0, 0): {"terrain": CombatTileData.TerrainType.PLAIN, "height": 0},
+				Vector2i(1, 0): {"terrain": CombatTileData.TerrainType.PLAIN, "height": 0},
+				Vector2i(2, 0): {"terrain": CombatTileData.TerrainType.PLAIN, "height": 0},
+				Vector2i(1, 1): {"terrain": CombatTileData.TerrainType.PLAIN, "height": 2},
+			}
+		)
+	)
+	var attacker := _make_unit({"id": "a", "position": Vector2i(0, 0), "melee_skill": 60})
+	var defender := _make_unit(
+		{"id": "d", "team": "enemy", "position": Vector2i(1, 0), "melee_defense": 20}
+	)
+	var defender_ally := _make_unit({"id": "da", "team": "enemy", "position": Vector2i(2, 0)})
+	var dead_supporter := _make_unit({"id": "dead", "position": Vector2i(2, 0)})
+	var high_supporter := _make_unit({"id": "high", "position": Vector2i(1, 1)})
+	dead_supporter.alive = false
+	assert_eq(
+		CombatRules.calculate_hit_chance(
+			attacker,
+			defender,
+			board,
+			null,
+			[attacker, defender, defender_ally, dead_supporter, high_supporter]
+		),
+		40
+	)
