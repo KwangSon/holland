@@ -158,3 +158,26 @@ func test_wait_turn_does_not_reset_waiting_unit_when_it_returns_same_round() -> 
 	state.end_turn()
 	assert_eq(state.get_active_unit().id, "p1")
 	assert_eq(first.action_points, 3)
+
+
+func test_unit_can_move_into_hostile_zoc() -> void:
+	var player := _make_unit({"id": "p", "team": "player", "initiative": 40})
+	var enemy := _make_unit(
+		{"id": "e", "team": "enemy", "position": Vector2i(2, 0), "initiative": 10}
+	)
+	var state := _start_state([player], [enemy], [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)])
+
+	assert_true(state.move_unit("p", Vector2i(1, 0)))
+
+
+func test_unit_cannot_leave_hostile_zoc() -> void:
+	var player := _make_unit(
+		{"id": "p", "team": "player", "position": Vector2i(1, 0), "initiative": 40}
+	)
+	var enemy := _make_unit(
+		{"id": "e", "team": "enemy", "position": Vector2i(2, 0), "initiative": 10}
+	)
+	var state := _start_state([player], [enemy], [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)])
+
+	assert_false(state.move_unit("p", Vector2i(0, 0)))
+	assert_eq(player.position, Vector2i(1, 0))

@@ -79,6 +79,8 @@ func move_unit(unit_id: String, target: Vector2i) -> bool:
 	var path := _board.find_path(unit.position, target)
 	if path.size() < 2:
 		return false
+	if _path_leaves_hostile_zoc(unit, path):
+		return false
 	var ap_cost := CombatRules.get_path_ap_cost(path, unit, _board)
 	var fatigue_cost := CombatRules.get_path_fatigue_cost(path, unit, _board)
 	if ap_cost > unit.action_points or unit.fatigue + fatigue_cost > unit.max_fatigue:
@@ -233,6 +235,18 @@ func _start_unit_turn(unit: CombatUnit, fatigue_recovery: int) -> void:
 		return
 	unit.begin_turn(fatigue_recovery)
 	_turn_started_round[unit.id] = round_number
+
+
+func _path_leaves_hostile_zoc(unit: CombatUnit, path: Array[Vector2i]) -> bool:
+	var all_units := get_all_units()
+	for i: int in range(1, path.size()):
+		var step_from := path[i - 1]
+		var controllers := CombatRules.get_hostile_zoc_controllers(
+			unit, step_from, all_units, _board
+		)
+		if not controllers.is_empty():
+			return true
+	return false
 
 
 func _get_active_ref() -> CombatUnit:

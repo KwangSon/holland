@@ -81,6 +81,29 @@ static func get_attack_targets(
 	return result
 
 
+static func get_zoc_cells(unit: CombatUnit, board: CombatBoard) -> Array[Vector2i]:
+	if not unit.alive:
+		return []
+
+	var result: Array[Vector2i] = []
+	for cell: Vector2i in board.get_neighbors(unit.position):
+		if board.is_melee_reachable(unit.position, cell):
+			result.append(cell)
+	return result
+
+
+static func get_hostile_zoc_controllers(
+	unit: CombatUnit, cell: Vector2i, all_units: Array[CombatUnit], board: CombatBoard
+) -> Array[CombatUnit]:
+	var result: Array[CombatUnit] = []
+	for other: CombatUnit in all_units:
+		if other.id == unit.id or other.team == unit.team or not other.alive:
+			continue
+		if cell in get_zoc_cells(other, board):
+			result.append(other)
+	return result
+
+
 ## Rolls an attack. Simple melee combat: 100% hit chance, flat damage.
 ## Returns: {hit, raw_damage, hp_damage}
 static func roll_attack(

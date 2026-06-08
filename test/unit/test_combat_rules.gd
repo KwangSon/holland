@@ -205,3 +205,34 @@ func test_low_ground_applies_hit_chance_penalty_per_level() -> void:
 		{"id": "d", "team": "enemy", "position": Vector2i(1, 0), "melee_defense": 20}
 	)
 	assert_eq(CombatRules.calculate_hit_chance(attacker, defender, board), 20)
+
+
+func test_zoc_cells_exclude_height_delta_two_neighbors() -> void:
+	var board := CombatBoard.new()
+	(
+		board
+		. setup_tiles(
+			{
+				Vector2i(0, 0): {"terrain": CombatTileData.TerrainType.PLAIN, "height": 0},
+				Vector2i(1, 0): {"terrain": CombatTileData.TerrainType.PLAIN, "height": 1},
+				Vector2i(0, 1): {"terrain": CombatTileData.TerrainType.PLAIN, "height": 2},
+			}
+		)
+	)
+	var unit := _make_unit({"position": Vector2i(0, 0)})
+	var zoc_cells := CombatRules.get_zoc_cells(unit, board)
+	assert_true(Vector2i(1, 0) in zoc_cells)
+	assert_false(Vector2i(0, 1) in zoc_cells)
+
+
+func test_hostile_zoc_controllers_ignore_allies() -> void:
+	var board := CombatBoard.new()
+	board.setup([Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)])
+	var unit := _make_unit({"id": "p", "team": "player", "position": Vector2i(1, 0)})
+	var ally := _make_unit({"id": "a", "team": "player", "position": Vector2i(0, 0)})
+	var enemy := _make_unit({"id": "e", "team": "enemy", "position": Vector2i(2, 0)})
+	var controllers := CombatRules.get_hostile_zoc_controllers(
+		unit, unit.position, [unit, ally, enemy], board
+	)
+	assert_eq(controllers.size(), 1)
+	assert_eq(controllers[0].id, "e")
