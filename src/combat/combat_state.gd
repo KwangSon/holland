@@ -8,6 +8,7 @@ var _turn_order: Array[String] = []  # unit_ids sorted by initiative
 var _turn_started_round: Dictionary = {}  # unit_id → round_number
 var _turn_index: int = 0
 var _rng: RandomNumberGenerator
+var _last_move_result: Dictionary = {}
 
 
 func start_encounter(
@@ -40,6 +41,7 @@ func _start_encounter_on_board(
 
 	_units.clear()
 	_turn_started_round.clear()
+	_last_move_result.clear()
 	var all: Array[CombatUnit] = []
 	for unit: CombatUnit in player_units:
 		_units[unit.id] = unit
@@ -72,6 +74,10 @@ func get_board() -> CombatBoard:
 	return _board
 
 
+func get_last_move_result() -> Dictionary:
+	return _last_move_result
+
+
 func get_legal_moves(unit_id: String) -> Array[Vector2i]:
 	var unit: CombatUnit = _units.get(unit_id, null)
 	if unit == null or not _is_active_unit_id(unit_id):
@@ -87,6 +93,7 @@ func get_attack_targets(unit_id: String) -> Array[String]:
 
 
 func move_unit(unit_id: String, target: Vector2i) -> bool:
+	_last_move_result = {"moved": false, "zoc_attacks": [], "blocked_by_zoc": false}
 	var unit: CombatUnit = _units.get(unit_id, null)
 	if unit == null or not unit.alive or not _is_active_unit_id(unit_id):
 		return false
@@ -95,7 +102,9 @@ func move_unit(unit_id: String, target: Vector2i) -> bool:
 	var path := _board.find_path(unit.position, target)
 	if path.size() < 2:
 		return false
-	if _path_leaves_hostile_zoc(unit, path):
+	var zoc_result := _resolve_zoc_escape_attacks(unit, path)
+	if zoc_result.get("blocked_by_zoc", false):
+		_last_move_result = zoc_result
 		return false
 	var ap_cost := CombatRules.get_path_ap_cost(path, unit, _board)
 	var fatigue_cost := CombatRules.get_path_fatigue_cost(path, unit, _board)
@@ -106,6 +115,8 @@ func move_unit(unit_id: String, target: Vector2i) -> bool:
 	_board.set_occupied(target, unit_id)
 	unit.action_points -= ap_cost
 	unit.fatigue += fatigue_cost
+	_last_move_result = zoc_result
+	_last_move_result["moved"] = true
 	return true
 
 
@@ -127,13 +138,7 @@ func attack(attacker_id: String, defender_id: String) -> Dictionary:
 	attacker.fatigue += CombatRules.ATTACK_FATIGUE_COST
 
 	if not defender.alive:
-		_board.clear_occupied(defender.position)
-		var dead_idx := _turn_order.find(defender_id)
-		_turn_order.erase(defender_id)
-		if dead_idx != -1 and dead_idx < _turn_index:
-			_turn_index -= 1
-		if not _turn_order.is_empty():
-			_turn_index = _turn_index % _turn_order.size()
+		_remove_dead_unit(defender_id)
 
 	return result
 
@@ -253,16 +258,39 @@ func _start_unit_turn(unit: CombatUnit, fatigue_recovery: int) -> void:
 	_turn_started_round[unit.id] = round_number
 
 
-func _path_leaves_hostile_zoc(unit: CombatUnit, path: Array[Vector2i]) -> bool:
+func _resolve_zoc_escape_attacks(unit: CombatUnit, path: Array[Vector2i]) -> Dictionary:
+	var result := {"moved": false, "zoc_attacks": [], "blocked_by_zoc": false}
 	var all_units := get_all_units()
 	for i: int in range(1, path.size()):
 		var step_from := path[i - 1]
 		var controllers := CombatRules.get_hostile_zoc_controllers(
 			unit, step_from, all_units, _board
 		)
-		if not controllers.is_empty():
-			return true
-	return false
+		for controller: CombatUnit in controllers:
+			var attack_result := CombatRules.roll_attack(controller, unit, _rng, _board)
+			CombatRules.apply_attack_result(unit, attack_result)
+			attack_result["attacker_id"] = controller.id
+			attack_result["defender_id"] = unit.id
+			attack_result["killed"] = not unit.alive
+			result["zoc_attacks"].append(attack_result)
+			if attack_result.get("hit", false):
+				result["blocked_by_zoc"] = true
+				if not unit.alive:
+					_remove_dead_unit(unit.id)
+				return result
+	return result
+
+
+func _remove_dead_unit(unit_id: String) -> void:
+	var unit: CombatUnit = _units.get(unit_id, null)
+	if unit != null:
+		_board.clear_occupied(unit.position)
+	var dead_idx := _turn_order.find(unit_id)
+	_turn_order.erase(unit_id)
+	if dead_idx != -1 and dead_idx < _turn_index:
+		_turn_index -= 1
+	if not _turn_order.is_empty():
+		_turn_index = _turn_index % _turn_order.size()
 
 
 func _get_active_ref() -> CombatUnit:

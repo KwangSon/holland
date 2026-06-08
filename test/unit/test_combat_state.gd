@@ -190,14 +190,43 @@ func test_unit_can_move_into_hostile_zoc() -> void:
 	assert_true(state.move_unit("p", Vector2i(1, 0)))
 
 
-func test_unit_cannot_leave_hostile_zoc() -> void:
+func test_zoc_escape_attack_hit_blocks_movement() -> void:
 	var player := _make_unit(
 		{"id": "p", "team": "player", "position": Vector2i(1, 0), "initiative": 40}
 	)
 	var enemy := _make_unit(
-		{"id": "e", "team": "enemy", "position": Vector2i(2, 0), "initiative": 10}
+		{
+			"id": "e",
+			"team": "enemy",
+			"position": Vector2i(2, 0),
+			"initiative": 10,
+			"melee_skill": 95,
+		}
 	)
 	var state := _start_state([player], [enemy], [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)])
 
 	assert_false(state.move_unit("p", Vector2i(0, 0)))
 	assert_eq(player.position, Vector2i(1, 0))
+	assert_true(state.get_last_move_result()["blocked_by_zoc"])
+	assert_eq(state.get_last_move_result()["zoc_attacks"].size(), 1)
+
+
+func test_zoc_escape_attack_miss_allows_movement() -> void:
+	var player := _make_unit(
+		{"id": "p", "team": "player", "position": Vector2i(1, 0), "initiative": 40}
+	)
+	var enemy := _make_unit(
+		{
+			"id": "e",
+			"team": "enemy",
+			"position": Vector2i(2, 0),
+			"initiative": 10,
+			"melee_skill": 0,
+		}
+	)
+	var state := _start_state([player], [enemy], [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)])
+
+	assert_true(state.move_unit("p", Vector2i(0, 0)))
+	assert_eq(player.position, Vector2i(0, 0))
+	assert_false(state.get_last_move_result()["blocked_by_zoc"])
+	assert_eq(state.get_last_move_result()["zoc_attacks"].size(), 1)
