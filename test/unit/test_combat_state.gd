@@ -35,6 +35,26 @@ func test_start_encounter_uses_current_initiative_order() -> void:
 	assert_eq(state.get_active_unit().id, "e")
 
 
+func test_start_encounter_tiles_preserves_terrain_and_height() -> void:
+	var player := _make_unit({"id": "p", "team": "player"})
+	var enemy := _make_unit({"id": "e", "team": "enemy", "position": Vector2i(1, 0)})
+	var state := CombatState.new()
+	(
+		state
+		. start_encounter_tiles(
+			[player],
+			[enemy],
+			{
+				Vector2i(0, 0): {"terrain": CombatTileData.TerrainType.PLAIN, "height": 0},
+				Vector2i(1, 0): {"terrain": CombatTileData.TerrainType.ROUGH, "height": 2},
+			},
+			42
+		)
+	)
+	assert_eq(state.get_board().get_terrain(Vector2i(1, 0)), CombatTileData.TerrainType.ROUGH)
+	assert_eq(state.get_board().get_height(Vector2i(1, 0)), 2)
+
+
 func test_fatigue_reduces_current_initiative_order() -> void:
 	var tired_fast_unit := _make_unit(
 		{"id": "p", "team": "player", "initiative": 50, "fatigue": 45}

@@ -18,7 +18,23 @@ func start_encounter(
 ) -> void:
 	_board = CombatBoard.new()
 	_board.setup(valid_cells)
+	_start_encounter_on_board(player_units, enemy_units, encounter_seed)
 
+
+func start_encounter_tiles(
+	player_units: Array[CombatUnit],
+	enemy_units: Array[CombatUnit],
+	tile_data_by_cell: Dictionary,
+	encounter_seed: int
+) -> void:
+	_board = CombatBoard.new()
+	_board.setup_tiles(tile_data_by_cell)
+	_start_encounter_on_board(player_units, enemy_units, encounter_seed)
+
+
+func _start_encounter_on_board(
+	player_units: Array[CombatUnit], enemy_units: Array[CombatUnit], encounter_seed: int
+) -> void:
 	_rng = RandomNumberGenerator.new()
 	_rng.seed = encounter_seed
 

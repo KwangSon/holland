@@ -98,21 +98,38 @@ func _draw_test_map() -> void:
 
 
 func _setup_combat() -> void:
-	var valid_cells: Array[Vector2i] = []
+	var tile_data_by_cell: Dictionary = {}
 	for y: int in TEST_MAP.size():
 		var row: Array = TEST_MAP[y]
 		for x: int in row.size():
-			if (row[x] as int) != EMPTY_TILE:
-				valid_cells.append(Vector2i(x, y))
+			var tile_index := row[x] as int
+			if tile_index != EMPTY_TILE:
+				tile_data_by_cell[Vector2i(x, y)] = _get_test_map_tile_data(tile_index)
 
 	var encounter: Dictionary = SaveManager.rna.get("encounter", {})
 	_state = CombatState.new()
-	_state.start_encounter(
+	_state.start_encounter_tiles(
 		_units_from_rna(SaveManager.rna.get("party", [])),
 		_units_from_rna(encounter.get("enemies", [])),
-		valid_cells,
+		tile_data_by_cell,
 		encounter.get("seed", 0)
 	)
+
+
+func _get_test_map_tile_data(tile_index: int) -> Dictionary:
+	match tile_index:
+		0:
+			return {"terrain": CombatTileData.TerrainType.PLAIN, "height": 0}
+		1:
+			return {"terrain": CombatTileData.TerrainType.ROUGH, "height": 0}
+		2:
+			return {"terrain": CombatTileData.TerrainType.PLAIN, "height": 1}
+		3:
+			return {"terrain": CombatTileData.TerrainType.ROUGH, "height": 1}
+		4:
+			return {"terrain": CombatTileData.TerrainType.SWAMP, "height": 0}
+		_:
+			return {"terrain": CombatTileData.TerrainType.PLAIN, "height": 0}
 
 
 func _units_from_rna(entries: Array) -> Array[CombatUnit]:
