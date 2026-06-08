@@ -1,5 +1,7 @@
 extends GutTest
 
+const CombatSkillDataScript := preload("res://src/combat/combat_skill_data.gd")
+
 
 func _make_unit(overrides: Dictionary = {}) -> CombatUnit:
 	var defaults := {
@@ -236,3 +238,33 @@ func test_hostile_zoc_controllers_ignore_allies() -> void:
 	)
 	assert_eq(controllers.size(), 1)
 	assert_eq(controllers[0].id, "e")
+
+
+func test_attack_targets_respect_skill_ap_cost_and_range() -> void:
+	var board := CombatBoard.new()
+	board.setup([Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)])
+	var attacker := _make_unit({"id": "a", "position": Vector2i(0, 0), "action_points": 5})
+	var defender := _make_unit({"id": "d", "team": "enemy", "position": Vector2i(2, 0)})
+	var skill = (
+		CombatSkillDataScript
+		. create(
+			{
+				"id": "reach_attack",
+				"action_point_cost": 6,
+				"fatigue_cost": 10,
+				"attack_range": 2,
+			}
+		)
+	)
+	assert_eq(
+		CombatRules.get_attack_targets(attacker, board, [attacker, defender], skill).size(), 0
+	)
+	attacker.action_points = 6
+	assert_eq(CombatRules.get_attack_targets(attacker, board, [attacker, defender], skill), ["d"])
+
+
+func test_skill_hit_modifier_changes_hit_chance() -> void:
+	var attacker := _make_unit({"melee_skill": 60})
+	var defender := _make_unit({"id": "d", "team": "enemy", "melee_defense": 20})
+	var skill = CombatSkillDataScript.create({"id": "accurate", "hit_modifier": 15})
+	assert_eq(CombatRules.calculate_hit_chance(attacker, defender, null, skill), 55)

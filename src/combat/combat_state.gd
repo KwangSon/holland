@@ -128,14 +128,15 @@ func attack(attacker_id: String, defender_id: String) -> Dictionary:
 		return {}
 	if not attacker.alive or not defender.alive or not _is_active_unit_id(attacker_id):
 		return {}
-	if not defender_id in CombatRules.get_attack_targets(attacker, _board, get_all_units()):
+	var skill: Object = CombatRules.get_basic_attack_skill()
+	if not defender_id in CombatRules.get_attack_targets(attacker, _board, get_all_units(), skill):
 		return {}
 
-	var result := CombatRules.roll_attack(attacker, defender, _rng, _board)
+	var result := CombatRules.roll_attack(attacker, defender, _rng, _board, skill)
 	CombatRules.apply_attack_result(defender, result)
 	result["killed"] = not defender.alive
-	attacker.action_points -= CombatRules.BASIC_ATTACK_AP_COST
-	attacker.fatigue += CombatRules.ATTACK_FATIGUE_COST
+	attacker.action_points -= skill.action_point_cost
+	attacker.fatigue += skill.fatigue_cost
 
 	if not defender.alive:
 		_remove_dead_unit(defender_id)

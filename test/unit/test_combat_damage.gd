@@ -1,5 +1,7 @@
 extends GutTest
 
+const CombatSkillDataScript := preload("res://src/combat/combat_skill_data.gd")
+
 
 func _make_unit(overrides: Dictionary = {}) -> CombatUnit:
 	var defaults := {
@@ -75,3 +77,20 @@ func test_miss_does_not_damage_armor() -> void:
 	)
 	assert_eq(defender.body_armor, 20)
 	assert_eq(defender.hp, 30)
+
+
+func test_skill_damage_percent_changes_raw_and_hp_damage() -> void:
+	var attacker := _make_unit({"damage": 10})
+	var defender := _make_unit({"id": "d", "team": "enemy"})
+	var skill = CombatSkillDataScript.create({"id": "half_hit", "damage_percent": 50})
+	var result := CombatRules.roll_attack(attacker, defender, _make_rng(42), null, skill)
+	assert_eq(result["raw_damage"], 5)
+	assert_eq(result["hp_damage"], 5)
+
+
+func test_skill_armor_damage_percent_changes_armor_damage() -> void:
+	var attacker := _make_unit({"damage": 10, "armor_penetration": 0})
+	var defender := _make_unit({"id": "d", "team": "enemy", "body_armor": 30})
+	var skill = CombatSkillDataScript.create({"id": "armor_breaker", "armor_damage_percent": 150})
+	var result := CombatRules.roll_damage(attacker, defender, attacker.damage, "body", skill)
+	assert_eq(result["armor_damage"], 15)

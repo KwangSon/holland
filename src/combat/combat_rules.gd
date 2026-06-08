@@ -1,8 +1,8 @@
 class_name CombatRules
 
+const CombatSkillDataScript := preload("res://src/combat/combat_skill_data.gd")
+
 const TURN_FATIGUE_RECOVERY: int = 15
-const ATTACK_FATIGUE_COST: int = 30
-const BASIC_ATTACK_AP_COST: int = 4
 const MIN_HIT_CHANCE: int = 5
 const MAX_HIT_CHANCE: int = 95
 const ARMOR_DAMAGE_PERCENT: int = 100
@@ -61,26 +61,22 @@ static func get_reachable_by_ap(unit: CombatUnit, board: CombatBoard) -> Array[V
 
 ## Returns ids of living enemies adjacent to attacker.
 static func get_attack_targets(
-	attacker: CombatUnit, board: CombatBoard, all_units: Array[CombatUnit]
+	attacker: CombatUnit, board: CombatBoard, all_units: Array[CombatUnit], skill = null
 ) -> Array[String]:
+	var attack_skill = _skill_or_basic(skill)
 	if not attacker.alive:
 		return []
-	if attacker.action_points < BASIC_ATTACK_AP_COST:
+	if attacker.action_points < attack_skill.action_point_cost:
 		return []
-	if attacker.fatigue + ATTACK_FATIGUE_COST > attacker.max_fatigue:
+	if attacker.fatigue + attack_skill.fatigue_cost > attacker.max_fatigue:
 		return []
 
 	var result: Array[String] = []
-	for neighbor: Vector2i in board.get_neighbors(attacker.position):
-		if not board.is_melee_reachable(attacker.position, neighbor):
+	for unit: CombatUnit in all_units:
+		if unit.team == attacker.team or not unit.alive:
 			continue
-		if not board.occupied.has(neighbor):
-			continue
-		var uid: String = board.occupied[neighbor]
-		for unit: CombatUnit in all_units:
-			if unit.id == uid and unit.team != attacker.team and unit.alive:
-				result.append(uid)
-				break
+		if _is_target_in_skill_range(attacker, unit, board, attack_skill):
+			result.append(unit.id)
 	return result
 
 
@@ -113,21 +109,26 @@ static func roll_attack(
 	attacker: CombatUnit,
 	defender: CombatUnit,
 	rng: RandomNumberGenerator,
-	board: CombatBoard = null
+	board: CombatBoard = null,
+	skill = null
 ) -> Dictionary:
-	var hit_chance := calculate_hit_chance(attacker, defender, board)
+	var attack_skill = _skill_or_basic(skill)
+	var hit_chance: int = calculate_hit_chance(attacker, defender, board, attack_skill)
 	var roll := rng.randi_range(1, 100)
 	var hit := roll <= hit_chance
 	var body_part := "body"
 	if hit:
-		body_part = roll_body_part(attacker, rng)
-	var raw_damage := attacker.damage
-	var damage_result := roll_damage(attacker, defender, raw_damage, body_part) if hit else {}
+		body_part = roll_body_part(attacker, rng, attack_skill)
+	var raw_damage := _percent_of(attacker.damage, attack_skill.damage_percent)
+	var damage_result := (
+		roll_damage(attacker, defender, raw_damage, body_part, attack_skill) if hit else {}
+	)
 
 	return {
 		"hit": hit,
 		"hit_chance": hit_chance,
 		"roll": roll,
+		"skill_id": attack_skill.id,
 		"body_part": body_part,
 		"raw_damage": raw_damage,
 		"armor_damage": damage_result.get("armor_damage", 0),
@@ -136,13 +137,14 @@ static func roll_attack(
 
 
 static func calculate_hit_chance(
-	attacker: CombatUnit, defender: CombatUnit, board: CombatBoard = null
+	attacker: CombatUnit, defender: CombatUnit, board: CombatBoard = null, skill = null
 ) -> int:
-	var defense := defender.melee_defense
+	var attack_skill = _skill_or_basic(skill)
+	var defense: int = defender.melee_defense
 	if defense > 50:
 		@warning_ignore("integer_division")
 		defense = 50 + ((defense - 50) / 2)
-	var chance := attacker.melee_skill - defense
+	var chance: int = attacker.melee_skill - defense + attack_skill.hit_modifier
 	if board != null:
 		var height_delta := (
 			board.get_height(attacker.position) - board.get_height(defender.position)
@@ -154,23 +156,30 @@ static func calculate_hit_chance(
 	return clampi(chance, MIN_HIT_CHANCE, MAX_HIT_CHANCE)
 
 
-static func roll_body_part(attacker: CombatUnit, rng: RandomNumberGenerator) -> String:
-	var head_chance := clampi(attacker.chance_to_hit_head, 0, 100)
+static func roll_body_part(
+	attacker: CombatUnit, rng: RandomNumberGenerator, skill = null
+) -> String:
+	var attack_skill = _skill_or_basic(skill)
+	var head_chance := clampi(attacker.chance_to_hit_head + attack_skill.head_hit_modifier, 0, 100)
 	return "head" if rng.randi_range(1, 100) <= head_chance else "body"
 
 
 static func roll_damage(
-	attacker: CombatUnit, defender: CombatUnit, raw_damage: int, body_part: String
+	attacker: CombatUnit, defender: CombatUnit, raw_damage: int, body_part: String, skill = null
 ) -> Dictionary:
-	var armor_before := defender.head_armor if body_part == "head" else defender.body_armor
-	var armor_damage := mini(armor_before, _percent_of(raw_damage, ARMOR_DAMAGE_PERCENT))
+	var attack_skill = _skill_or_basic(skill)
+	var armor_before: int = defender.head_armor if body_part == "head" else defender.body_armor
+	var armor_damage: int = mini(
+		armor_before, _percent_of(raw_damage, attack_skill.armor_damage_percent)
+	)
 	var armor_after := maxi(0, armor_before - armor_damage)
 	var hp_damage := raw_damage
 
 	if armor_before > 0:
-		var penetrating_damage := _percent_of(
-			raw_damage, clampi(attacker.armor_penetration, 0, 100)
+		var armor_penetration := clampi(
+			attacker.armor_penetration + attack_skill.armor_penetration_modifier, 0, 100
 		)
+		var penetrating_damage := _percent_of(raw_damage, armor_penetration)
 		var overflow_damage := floori(float(maxi(0, raw_damage - armor_before)) / 2.0)
 		var armor_reduction := _percent_of(armor_after, ARMOR_HP_DAMAGE_REDUCTION_PERCENT)
 		hp_damage = maxi(0, penetrating_damage + overflow_damage - armor_reduction)
@@ -189,6 +198,22 @@ static func roll_damage(
 
 static func _percent_of(value: int, percent: int) -> int:
 	return floori(float(value) * float(percent) / 100.0)
+
+
+static func get_basic_attack_skill():
+	return CombatSkillDataScript.basic_attack()
+
+
+static func _skill_or_basic(skill):
+	return skill if skill != null else get_basic_attack_skill()
+
+
+static func _is_target_in_skill_range(
+	attacker: CombatUnit, defender: CombatUnit, board: CombatBoard, skill
+) -> bool:
+	if skill.attack_range <= 1:
+		return board.is_melee_reachable(attacker.position, defender.position)
+	return board.hex_distance(attacker.position, defender.position) <= skill.attack_range
 
 
 static func get_path_ap_cost(path: Array[Vector2i], unit: CombatUnit, board: CombatBoard) -> int:
