@@ -32,10 +32,7 @@ func start_encounter(
 		_board.set_occupied(unit.position, unit.id)
 		all.append(unit)
 
-	_turn_order.clear()
-	for unit: CombatUnit in all:
-		_turn_order.append(unit.id)
-
+	_build_turn_order(all)
 	_turn_index = 0
 	_get_active_ref().begin_turn(0)
 
@@ -130,7 +127,10 @@ func end_turn() -> void:
 		return
 	if _turn_index + 1 >= _turn_order.size():
 		round_number += 1
-	_turn_index = (_turn_index + 1) % _turn_order.size()
+		_build_turn_order(_get_living_units())
+		_turn_index = 0
+	else:
+		_turn_index += 1
 	var active := get_active_unit()
 	if active != null:
 		active.begin_turn(CombatRules.TURN_FATIGUE_RECOVERY)
@@ -193,6 +193,33 @@ func end_player_phase() -> void:
 
 func get_outcome() -> String:
 	return CombatRules.check_outcome(get_all_units())
+
+
+func _build_turn_order(units: Array[CombatUnit]) -> void:
+	var living: Array[CombatUnit] = []
+	for unit: CombatUnit in units:
+		if unit.alive:
+			living.append(unit)
+	living.sort_custom(
+		func(a: CombatUnit, b: CombatUnit) -> bool:
+			var initiative_a := a.get_current_initiative()
+			var initiative_b := b.get_current_initiative()
+			if initiative_a == initiative_b:
+				return a.id < b.id
+			return initiative_a > initiative_b
+	)
+
+	_turn_order.clear()
+	for unit: CombatUnit in living:
+		_turn_order.append(unit.id)
+
+
+func _get_living_units() -> Array[CombatUnit]:
+	var result: Array[CombatUnit] = []
+	for unit: CombatUnit in _units.values():
+		if unit.alive:
+			result.append(unit)
+	return result
 
 
 func _get_active_ref() -> CombatUnit:

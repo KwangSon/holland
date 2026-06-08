@@ -202,6 +202,10 @@ func has_trait(trait_id: String) -> bool:
 	return trait_id in trait_ids
 
 
+func get_current_initiative() -> int:
+	return maxi(0, initiative - fatigue)
+
+
 func begin_turn(fatigue_recovery: int) -> void:
 	action_points = max_action_points
 	fatigue = maxi(0, fatigue - fatigue_recovery)
