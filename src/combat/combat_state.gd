@@ -37,7 +37,7 @@ func start_encounter(
 		_turn_order.append(unit.id)
 
 	_turn_index = 0
-	_get_active_ref().has_acted = false
+	_get_active_ref().begin_turn(0)
 
 
 func get_active_unit() -> CombatUnit:
@@ -77,11 +77,20 @@ func move_unit(unit_id: String, target: Vector2i) -> bool:
 		return false
 	if not target in CombatRules.get_legal_moves(unit, _board):
 		return false
+	var path := _board.find_path(unit.position, target)
+	if path.size() < 2:
+		return false
+	var ap_cost := CombatRules.get_path_ap_cost(path, unit, _board)
+	var fatigue_cost := CombatRules.get_path_fatigue_cost(path, unit, _board)
+	if ap_cost > unit.action_points or unit.fatigue + fatigue_cost > unit.max_fatigue:
+		return false
 	_board.clear_occupied(unit.position)
 	unit.position = target
 	_board.set_occupied(target, unit_id)
-	unit.has_acted = true
-	unit.fatigue += CombatRules.MOVE_FATIGUE_COST
+	unit.action_points -= ap_cost
+	unit.fatigue += fatigue_cost
+	if unit.action_points <= 0 or unit.fatigue >= unit.max_fatigue:
+		unit.has_acted = true
 	return true
 
 
@@ -96,11 +105,13 @@ func attack(attacker_id: String, defender_id: String) -> Dictionary:
 	if not defender_id in CombatRules.get_attack_targets(attacker, _board, get_all_units()):
 		return {}
 
-	var result := CombatRules.roll_attack(attacker, defender, _rng)
+	var result := CombatRules.roll_attack(attacker, defender, _rng, _board)
 	CombatRules.apply_attack_result(defender, result)
 	result["killed"] = not defender.alive
-	attacker.has_acted = true
+	attacker.action_points -= CombatRules.BASIC_ATTACK_AP_COST
 	attacker.fatigue += CombatRules.ATTACK_FATIGUE_COST
+	if attacker.action_points <= 0 or attacker.fatigue >= attacker.max_fatigue:
+		attacker.has_acted = true
 
 	if not defender.alive:
 		_board.clear_occupied(defender.position)
@@ -122,7 +133,7 @@ func end_turn() -> void:
 	_turn_index = (_turn_index + 1) % _turn_order.size()
 	var active := get_active_unit()
 	if active != null:
-		active.has_acted = false
+		active.begin_turn(CombatRules.TURN_FATIGUE_RECOVERY)
 
 
 ## Returns units of the given team remaining to act in the current turn cycle.

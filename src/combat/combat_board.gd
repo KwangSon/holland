@@ -2,6 +2,9 @@ class_name CombatBoard
 
 const CombatTileDataScript := preload("res://src/combat/combat_tile_data.gd")
 
+const HEIGHT_CHANGE_AP_COST := 1
+const HEIGHT_CHANGE_FATIGUE_COST := 5
+
 ## Vector2i → unit_id (String) for occupied cells.
 var occupied: Dictionary = {}
 
@@ -64,8 +67,36 @@ func get_terrain(cell: Vector2i) -> int:
 
 
 func set_terrain(cell: Vector2i, terrain: int) -> void:
-	get_tile_data(cell).terrain = terrain
+	get_tile_data(cell).set_terrain(terrain)
 	_build_astar(_valid.keys())
+
+
+func get_step_ap_cost(from: Vector2i, to: Vector2i, unit: CombatUnit = null) -> int:
+	assert(is_valid(from), "CombatBoard: invalid from cell %s" % from)
+	assert(is_valid(to), "CombatBoard: invalid to cell %s" % to)
+	assert(to in get_neighbors(from), "CombatBoard: cells must be adjacent")
+	var cost := _get_terrain_ap_cost(get_terrain(to))
+	if get_height(from) != get_height(to) and not _has_pathfinder(unit):
+		cost += HEIGHT_CHANGE_AP_COST
+	return cost
+
+
+func get_step_fatigue_cost(from: Vector2i, to: Vector2i, _unit: CombatUnit = null) -> int:
+	assert(is_valid(from), "CombatBoard: invalid from cell %s" % from)
+	assert(is_valid(to), "CombatBoard: invalid to cell %s" % to)
+	assert(to in get_neighbors(from), "CombatBoard: cells must be adjacent")
+	var cost := _get_terrain_fatigue_cost(get_terrain(to))
+	if get_height(from) != get_height(to):
+		cost += HEIGHT_CHANGE_FATIGUE_COST
+	return cost
+
+
+func is_melee_reachable(attacker_cell: Vector2i, defender_cell: Vector2i) -> bool:
+	if not is_valid(attacker_cell) or not is_valid(defender_cell):
+		return false
+	if not defender_cell in get_neighbors(attacker_cell):
+		return false
+	return abs(get_height(attacker_cell) - get_height(defender_cell)) <= 1
 
 
 ## Returns all valid neighboring cells using flat-top offset coordinates
@@ -133,9 +164,37 @@ func _create_tile_data(data):
 		return data
 
 	var tile = CombatTileDataScript.new()
-	tile.terrain = data.get("terrain", CombatTileDataScript.TerrainType.PLAIN)
+	tile.set_terrain(data.get("terrain", CombatTileDataScript.TerrainType.PLAIN))
 	tile.set_height(data.get("height", CombatTileDataScript.MIN_HEIGHT))
 	return tile
+
+
+func _get_terrain_ap_cost(terrain: int) -> int:
+	match terrain:
+		CombatTileDataScript.TerrainType.PLAIN:
+			return 2
+		CombatTileDataScript.TerrainType.ROUGH:
+			return 3
+		CombatTileDataScript.TerrainType.SWAMP:
+			return 4
+		_:
+			return 999999
+
+
+func _get_terrain_fatigue_cost(terrain: int) -> int:
+	match terrain:
+		CombatTileDataScript.TerrainType.PLAIN:
+			return 4
+		CombatTileDataScript.TerrainType.ROUGH:
+			return 6
+		CombatTileDataScript.TerrainType.SWAMP:
+			return 8
+		_:
+			return 999999
+
+
+func _has_pathfinder(unit: CombatUnit) -> bool:
+	return unit != null and unit.has_trait("pathfinder")
 
 
 func _to_cube(cell: Vector2i) -> Vector3i:

@@ -7,6 +7,7 @@ var weapon = null
 var head_armor_item = null
 var body_armor_item = null
 var accessory = null
+var trait_ids: Array[String] = []
 
 # === Base Stats (without equipment) ===
 var base_head_armor: int = 0
@@ -82,13 +83,14 @@ static func create(data: Dictionary) -> CombatUnit:
 	u.head_armor_item = data.get("head_armor_item", null)
 	u.body_armor_item = data.get("body_armor_item", null)
 	u.accessory = data.get("accessory", null)
+	u.trait_ids.assign(data.get("trait_ids", []))
 
 	# Base Stats
 	u.base_head_armor = data.get("head_armor", 0)
 	u.base_body_armor = data.get("body_armor", 0)
 	u.base_max_hp = data.get("max_hp", 10)
 	u.base_hp = data.get("hp", u.base_max_hp)
-	u.base_max_action_points = data.get("max_action_points", 4)
+	u.base_max_action_points = data.get("max_action_points", 9)
 	u.base_action_points = data.get("action_points", u.base_max_action_points)
 	u.base_max_fatigue = data.get("max_fatigue", 100)
 	u.base_fatigue = data.get("fatigue", 0)
@@ -194,3 +196,13 @@ func unequip_item(slot: String) -> void:
 		"accessory":
 			accessory = null
 	recalculate_stats()
+
+
+func has_trait(trait_id: String) -> bool:
+	return trait_id in trait_ids
+
+
+func begin_turn(fatigue_recovery: int) -> void:
+	action_points = max_action_points
+	fatigue = maxi(0, fatigue - fatigue_recovery)
+	has_acted = false

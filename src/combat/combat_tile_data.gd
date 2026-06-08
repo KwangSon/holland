@@ -9,6 +9,14 @@ var terrain: TerrainType = TerrainType.PLAIN
 var height: int = MIN_HEIGHT
 
 
+func set_terrain(value: int) -> void:
+	assert(
+		value >= TerrainType.PLAIN and value <= TerrainType.BLOCKED,
+		"CombatTileData: invalid terrain type %d" % value
+	)
+	terrain = value as TerrainType
+
+
 func set_height(value: int) -> void:
 	assert(
 		value >= MIN_HEIGHT and value <= MAX_HEIGHT,
