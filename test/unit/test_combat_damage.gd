@@ -32,6 +32,30 @@ func test_roll_attack_defaults_to_body_hit() -> void:
 	assert_eq(result["hp_damage"], 10)
 
 
+func test_roll_attack_result_has_stable_action_result_keys() -> void:
+	var attacker := _make_unit({"damage": 15})
+	var defender := _make_unit({"id": "d", "team": "enemy", "body_armor": 10})
+	var result := CombatRules.roll_attack(attacker, defender, _make_rng(42))
+
+	for key: String in [
+		"hit",
+		"hit_chance",
+		"roll",
+		"skill_id",
+		"skill_display_name",
+		"action_point_cost",
+		"fatigue_cost",
+		"body_part",
+		"raw_damage",
+		"armor_before",
+		"armor_damage",
+		"armor_after",
+		"hp_damage",
+		"killed",
+	]:
+		assert_true(result.has(key), "missing key: %s" % key)
+
+
 func test_roll_body_part_can_force_head_hit() -> void:
 	var attacker := _make_unit({"chance_to_hit_head": 100})
 	assert_eq(CombatRules.roll_body_part(attacker, _make_rng(1)), "head")

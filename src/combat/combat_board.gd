@@ -44,6 +44,13 @@ func is_valid(cell: Vector2i) -> bool:
 	return _valid.has(cell)
 
 
+func get_valid_cells() -> Array[Vector2i]:
+	var result: Array[Vector2i] = []
+	for cell: Vector2i in _valid.keys():
+		result.append(cell)
+	return result
+
+
 ## A cell is passable if it is valid and not occupied by another unit.
 func is_passable(cell: Vector2i) -> bool:
 	return _valid.has(cell) and not occupied.has(cell) and not get_tile_data(cell).is_blocked()

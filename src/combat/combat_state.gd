@@ -138,6 +138,10 @@ func attack(
 	var skill: CombatSkillData = CombatSkillRegistry.get_skill(skill_id)
 	if not defender_id in CombatRules.get_attack_targets(attacker, _board, get_all_units(), skill):
 		return {}
+	if attacker.action_points < skill.action_point_cost:
+		return {}
+	if attacker.fatigue + skill.fatigue_cost > attacker.max_fatigue:
+		return {}
 
 	var result := CombatRules.roll_attack(attacker, defender, _rng, _board, skill, get_all_units())
 	CombatRules.apply_attack_result(defender, result)
@@ -320,6 +324,8 @@ func _remove_dead_unit(unit_id: String) -> void:
 	_turn_order.erase(unit_id)
 	if dead_idx != -1 and dead_idx < _turn_index:
 		_turn_index -= 1
+	elif dead_idx == _turn_index and _turn_index >= _turn_order.size():
+		_turn_index = 0
 	if not _turn_order.is_empty():
 		_turn_index = _turn_index % _turn_order.size()
 

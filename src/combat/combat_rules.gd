@@ -105,8 +105,7 @@ static func get_hostile_zoc_controllers(
 	return result
 
 
-## Rolls an attack. Simple melee combat: 100% hit chance, flat damage.
-## Returns: {hit, raw_damage, hp_damage}
+## Rolls an attack and returns a stable combat action result dictionary.
 static func roll_attack(
 	attacker: CombatUnit,
 	defender: CombatUnit,
@@ -132,10 +131,16 @@ static func roll_attack(
 		"hit_chance": hit_chance,
 		"roll": roll,
 		"skill_id": attack_skill.id,
+		"skill_display_name": attack_skill.display_name,
+		"action_point_cost": attack_skill.action_point_cost,
+		"fatigue_cost": attack_skill.fatigue_cost,
 		"body_part": body_part,
 		"raw_damage": raw_damage,
+		"armor_before": damage_result.get("armor_before", 0),
 		"armor_damage": damage_result.get("armor_damage", 0),
+		"armor_after": damage_result.get("armor_after", 0),
 		"hp_damage": damage_result.get("hp_damage", 0),
+		"killed": false,
 	}
 
 
@@ -179,6 +184,7 @@ static func preview_attack(
 	return {
 		"hit_chance": hit_chance,
 		"skill_id": attack_skill.id,
+		"skill_display_name": attack_skill.display_name,
 		"raw_damage": raw_damage,
 		"body_armor_damage": body_damage.get("armor_damage", 0),
 		"body_hp_damage": body_damage.get("hp_damage", 0),

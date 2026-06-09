@@ -305,12 +305,10 @@ func _build_result_popup(canvas: CanvasLayer) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
-	# Handle mouse movement for hover path
 	if event is InputEventMouseMotion:
 		_on_mouse_move()
 		return
 
-	# Handle mouse button for click
 	if not event is InputEventMouseButton:
 		return
 	var mb := event as InputEventMouseButton
@@ -349,12 +347,10 @@ func _on_mouse_move() -> void:
 		_refresh_overlays()
 		return
 
-	# Check if cell is a valid move target
 	var legal_moves := _state.get_legal_moves(active.id)
 	if cell in legal_moves:
 		if cell != _hovered_cell:
 			_hovered_cell = cell
-			# Find path from active unit to hovered cell
 			_hover_path = _state.get_board().find_path(active.position, cell)
 			_refresh_move_preview()
 			_refresh_overlays()
@@ -371,7 +367,6 @@ func _handle_cell_click(cell: Vector2i) -> void:
 
 	match _phase:
 		InputPhase.IDLE:
-			# Select only the active unit's cell.
 			if _state.get_board().occupied.get(cell, "") == active.id:
 				_selected_id = active.id
 				_phase = InputPhase.UNIT_SELECTED
@@ -444,34 +439,26 @@ func _on_highlight_draw() -> void:
 	if active == null or active.id != _selected_id:
 		return
 
-	# Attack mode - show attack range with different colors for each direction (Flat-top)
 	if _attack_mode:
 		var board := _state.get_board()
-		# Color mapping for 6 directions: N=yellow, NE=orange, SE=red, S=purple, SW=blue, NW=green
-		var colors: Array[Color] = [
-			Color(1.0, 1.0, 0.0, 0.6),  # 노란색 (N)
-			Color(1.0, 0.65, 0.0, 0.6),  # 주황색 (NE)
-			Color(1.0, 0.0, 0.0, 0.6),  # 빨간색 (SE)
-			Color(0.6, 0.0, 0.8, 0.6),  # 보라색 (S)
-			Color(0.0, 0.5, 1.0, 0.6),  # 파란색 (SW)
-			Color(0.0, 1.0, 0.5, 0.6),  # 초록색 (NW)
-		]
-		# Use board.get_neighbors() for consistency
-		var neighbors := board.get_neighbors(active.position)
-		for i: int in neighbors.size():
-			_draw_hex(_highlight_layer, neighbors[i], colors[i])
-		# Show enemies in red on top
+		var skill: CombatSkillData = CombatSkillRegistry.get_skill(_selected_skill_id)
+		for cell: Vector2i in board.get_valid_cells():
+			if cell == active.position:
+				continue
+			if skill.attack_range <= 1 and not board.is_melee_reachable(active.position, cell):
+				continue
+			if board.hex_distance(active.position, cell) > skill.attack_range:
+				continue
+			_draw_hex(_highlight_layer, cell, Color(1.0, 0.75, 0.1, 0.22))
 		for uid: String in _state.get_attack_targets(_selected_id, _selected_skill_id):
 			var unit: CombatUnit = _find_unit(uid)
 			if unit != null:
 				_draw_hex(_highlight_layer, unit.position, Color(1.0, 0.2, 0.2, 0.8))
 		return
 
-	# Movement range — blue
 	for cell: Vector2i in _state.get_legal_moves(_selected_id):
 		_draw_hex(_highlight_layer, cell, Color(0.2, 0.5, 1.0, 0.35))
 
-	# Attackable enemies — red
 	for uid: String in _state.get_attack_targets(_selected_id, _selected_skill_id):
 		var unit: CombatUnit = _find_unit(uid)
 		if unit != null:
@@ -619,22 +606,34 @@ func _refresh_ui() -> void:
 
 
 func _log_attack(result: Dictionary, defender_id: String) -> void:
+	if result.is_empty():
+		_append_log("공격 실패")
+		return
 	var defender := _find_unit(defender_id)
 	var name_str := defender.display_name if defender != null else defender_id
+	var skill_name: String = result.get("skill_display_name", result.get("skill_id", "공격"))
 	if result.get("hit", false):
 		var part := "머리" if result.get("body_part", "body") == "head" else "몸"
 		var msg := (
-			"공격 → %s %s  명중 %d%%  굴림 %d  갑옷 %d  HP %d"
-			% [name_str, part, result.get("hit_chance", 0), result.get("roll", 0),
-				result.get("armor_damage", 0), result.get("hp_damage", 0)]
+			"%s → %s %s  명중 %d%%  굴림 %d  갑옷 %d→%d  HP -%d"
+			% [
+				skill_name,
+				name_str,
+				part,
+				result.get("hit_chance", 0),
+				result.get("roll", 0),
+				result.get("armor_before", 0),
+				result.get("armor_after", 0),
+				result.get("hp_damage", 0),
+			]
 		)
 		if result.get("killed", false):
 			msg += "  [사망]"
 		_append_log(msg)
 	else:
 		var msg := (
-			"공격 → %s  명중 %d%%  굴림 %d  빗나감"
-			% [name_str, result.get("hit_chance", 0), result.get("roll", 0)]
+			"%s → %s  명중 %d%%  굴림 %d  빗나감"
+			% [skill_name, name_str, result.get("hit_chance", 0), result.get("roll", 0)]
 		)
 		_append_log(msg)
 
@@ -973,28 +972,27 @@ func _move_unit_along_path(unit: CombatUnit, path: Array[Vector2i]) -> void:
 		_refresh_ui()
 		return
 
-	# Set initial visual position
+	var dest := path[-1]
+	var dest_pos := _cell_to_local(dest)
+	var moved := _state.move_unit(unit.id, dest)
+	_log_move_result(unit)
+	if not moved:
+		unit.visual_position = _cell_to_local(unit.position)
+		_refresh_overlays()
+		_refresh_ui()
+		return
+
 	var start_pos := _cell_to_local(path[0])
 	unit.visual_position = start_pos
 
-	# Move to final destination in state
-	var dest := path[-1]
-	var dest_pos := _cell_to_local(dest)
-
-	# Create tween for smooth movement
 	var tween := create_tween()
 	tween.set_ease(Tween.EASE_IN_OUT)
 	tween.set_trans(Tween.TRANS_LINEAR)
 
-	# Tween visual position
 	tween.tween_property(unit, "visual_position", dest_pos, 0.2 * path.size())
-
-	# Update state after animation completes
 	tween.finished.connect(
 		func():
-			var moved := _state.move_unit(unit.id, dest)
-			_log_move_result(unit)
-			unit.visual_position = dest_pos if moved else _cell_to_local(unit.position)
+			unit.visual_position = dest_pos
 			_refresh_overlays()
 			_refresh_ui()
 	)

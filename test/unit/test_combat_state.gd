@@ -153,6 +153,44 @@ func test_attack_requires_enough_ap() -> void:
 	assert_true(state.attack("p", "e").is_empty())
 
 
+func test_attack_requires_fatigue_capacity() -> void:
+	var player := _make_unit(
+		{"id": "p", "team": "player", "initiative": 40, "fatigue": 80, "max_fatigue": 100}
+	)
+	var enemy := _make_unit({"id": "e", "team": "enemy", "position": Vector2i(1, 0)})
+	var state := _start_state([player], [enemy], [Vector2i(0, 0), Vector2i(1, 0)])
+
+	assert_eq(state.get_attack_targets("p").size(), 0)
+	assert_true(state.attack("p", "e").is_empty())
+	assert_eq(player.action_points, 9)
+	assert_eq(player.fatigue, 80)
+
+
+func test_lethal_attack_clears_occupancy_and_removes_dead_unit_from_queue() -> void:
+	var player := _make_unit({"id": "p", "team": "player", "initiative": 40, "damage": 100})
+	var enemy := _make_unit(
+		{
+			"id": "e",
+			"team": "enemy",
+			"position": Vector2i(1, 0),
+			"initiative": 10,
+			"max_hp": 5,
+			"hp": 5,
+		}
+	)
+	var state := _start_state([player], [enemy], [Vector2i(0, 0), Vector2i(1, 0)])
+
+	var result := state.attack("p", "e")
+
+	assert_true(result.get("killed", false))
+	assert_false(state.get_board().occupied.has(Vector2i(1, 0)))
+	var remaining_ids := state.get_remaining_turn_queue().map(
+		func(unit: CombatUnit) -> String: return unit.id
+	)
+	assert_eq(remaining_ids, ["p"])
+	assert_eq(state.get_outcome(), "victory")
+
+
 func test_recover_consumes_ap_and_reduces_fatigue() -> void:
 	var player := _make_unit({"id": "p", "team": "player", "initiative": 80, "fatigue": 50})
 	var enemy := _make_unit({"id": "e", "team": "enemy", "position": Vector2i(1, 0)})
