@@ -34,6 +34,7 @@ var _enemy_label: Label
 var _bottom_panel: MarginContainer
 var _unit_name_label: Label
 var _unit_stats_label: Label
+var _move_preview_label: Label
 var _log_label: Label
 var _queue_container: HBoxContainer
 var _end_round_btn: Button
@@ -231,6 +232,9 @@ func _build_bottom_panel(canvas: CanvasLayer) -> void:
 	_unit_stats_label = Label.new()
 	info_vbox.add_child(_unit_stats_label)
 
+	_move_preview_label = Label.new()
+	info_vbox.add_child(_move_preview_label)
+
 	_log_label = Label.new()
 	info_vbox.add_child(_log_label)
 
@@ -345,15 +349,13 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _on_mouse_move() -> void:
 	if _phase != InputPhase.UNIT_SELECTED:
-		_hovered_cell = Vector2i(-1, -1)
-		_hover_path = []
+		_clear_hover_path()
 		_refresh_overlays()
 		return
 
 	var active := _state.get_active_unit()
 	if active == null:
-		_hovered_cell = Vector2i(-1, -1)
-		_hover_path = []
+		_clear_hover_path()
 		_refresh_overlays()
 		return
 
@@ -367,11 +369,11 @@ func _on_mouse_move() -> void:
 			_hovered_cell = cell
 			# Find path from active unit to hovered cell
 			_hover_path = _state.get_board().find_path(active.position, cell)
+			_refresh_move_preview()
 			_refresh_overlays()
 	else:
 		if _hovered_cell != Vector2i(-1, -1):
-			_hovered_cell = Vector2i(-1, -1)
-			_hover_path = []
+			_clear_hover_path()
 			_refresh_overlays()
 
 
@@ -421,7 +423,7 @@ func _handle_cell_click(cell: Vector2i) -> void:
 				# Use hover path if available, otherwise find new path
 				var move_path: Array[Vector2i] = (
 					_hover_path
-					if _hover_path.size() > 0
+					if _hover_path.size() > 0 and _hovered_cell == cell
 					else _state.get_board().find_path(active.position, cell)
 				)
 				if move_path.size() > 1:
@@ -441,6 +443,7 @@ func _deselect() -> void:
 	_phase = InputPhase.IDLE
 	_attack_mode = false
 	_attack_btn.text = "공격"
+	_clear_hover_path()
 	_refresh_overlays()
 	_refresh_ui()
 	_start_turn()
@@ -594,6 +597,7 @@ func _refresh_ui() -> void:
 	var active := _state.get_active_unit()
 	if active == null:
 		_bottom_panel.visible = false
+		_move_preview_label.text = ""
 		return
 
 	_bottom_panel.visible = true
@@ -610,6 +614,7 @@ func _refresh_ui() -> void:
 	if active.is_ai:
 		_unit_name_label.text = active.display_name + " (AI 차례)"
 		_unit_stats_label.text = ""
+		_move_preview_label.text = ""
 		return
 
 	_unit_name_label.text = active.display_name
@@ -629,6 +634,7 @@ func _refresh_ui() -> void:
 			active.damage,
 		]
 	)
+	_refresh_move_preview()
 
 
 func _log_attack(result: Dictionary, defender_id: String) -> void:
@@ -882,6 +888,30 @@ func _safe_ratio(value: int, max_value: int) -> float:
 	if max_value <= 0:
 		return 0.0
 	return clamp(float(value) / float(max_value), 0.0, 1.0)
+
+
+func _clear_hover_path() -> void:
+	_hovered_cell = Vector2i(-1, -1)
+	_hover_path = []
+	_refresh_move_preview()
+
+
+func _refresh_move_preview() -> void:
+	if _move_preview_label == null:
+		return
+	if _state == null or _phase != InputPhase.UNIT_SELECTED or _hover_path.size() < 2:
+		_move_preview_label.text = ""
+		return
+
+	var active := _state.get_active_unit()
+	if active == null or active.id != _selected_id:
+		_move_preview_label.text = ""
+		return
+
+	var board := _state.get_board()
+	var ap_cost := CombatRules.get_path_ap_cost(_hover_path, active, board)
+	var fatigue_cost := CombatRules.get_path_fatigue_cost(_hover_path, active, board)
+	_move_preview_label.text = "이동 비용  AP %d  피로도 +%d" % [ap_cost, fatigue_cost]
 
 
 ## Move unit along path with tween animation (non-blocking)
