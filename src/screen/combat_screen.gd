@@ -52,6 +52,7 @@ var _result_btn: Button
 # Hover pathfinding
 var _hovered_cell: Vector2i = Vector2i(-1, -1)
 var _hover_path: Array[Vector2i] = []
+var _combat_log: Array[String] = []
 
 
 func _ready() -> void:
@@ -300,11 +301,6 @@ func _build_result_popup(canvas: CanvasLayer) -> void:
 	vbox.add_child(_result_btn)
 
 
-# ============================================================
-# 입력
-# ============================================================
-
-
 func _unhandled_input(event: InputEvent) -> void:
 	# Handle mouse movement for hover path
 	if event is InputEventMouseMotion:
@@ -437,11 +433,6 @@ func _deselect() -> void:
 	_start_turn()
 
 
-# ============================================================
-# 렌더링
-# ============================================================
-
-
 func _on_highlight_draw() -> void:
 	if _state == null or _phase != InputPhase.UNIT_SELECTED:
 		return
@@ -572,11 +563,6 @@ func _refresh_overlays() -> void:
 	_unit_layer.queue_redraw()
 
 
-# ============================================================
-# UI
-# ============================================================
-
-
 func _refresh_ui() -> void:
 	_round_label.text = "라운드 %d" % _state.round_number
 	_ally_label.text = "아군 %d" % _count_alive("player")
@@ -640,11 +626,13 @@ func _log_attack(result: Dictionary, defender_id: String) -> void:
 		)
 		if result.get("killed", false):
 			msg += "  [사망]"
-		_log_label.text = msg
+		_append_log(msg)
 	else:
-		_log_label.text = (
+		var msg := (
 			"공격 → %s  명중 %d%%  굴림 %d  빗나감"
-			% [name_str, result.get("hit_chance", 0), result.get("roll", 0)])
+			% [name_str, result.get("hit_chance", 0), result.get("roll", 0)]
+		)
+		_append_log(msg)
 
 
 func _log_move_result(unit: CombatUnit) -> void:
@@ -658,7 +646,7 @@ func _log_move_result(unit: CombatUnit) -> void:
 		attacker.display_name if attacker != null else attack.get("attacker_id", "")
 	)
 	if move_result.get("blocked_by_zoc", false):
-		_log_label.text = (
+		_append_log(
 			"%s 이탈 저지 ← %s  HP %d"
 			% [
 				unit.display_name,
@@ -667,12 +655,14 @@ func _log_move_result(unit: CombatUnit) -> void:
 			]
 		)
 	else:
-		_log_label.text = "%s 이탈 성공  %d회 회피" % [unit.display_name, zoc_attacks.size()]
+		_append_log("%s 이탈 성공  %d회 회피" % [unit.display_name, zoc_attacks.size()])
 
 
-# ============================================================
-# 결과 확인 & 버튼 콜백
-# ============================================================
+func _append_log(message: String) -> void:
+	_combat_log.append(message)
+	while _combat_log.size() > 4:
+		_combat_log.pop_front()
+	_log_label.text = "\n".join(_combat_log)
 
 
 func _check_outcome() -> void:
@@ -728,7 +718,7 @@ func _on_recover_pressed() -> void:
 	var active := _state.get_active_unit()
 	if active == null or not _state.recover(active.id):
 		return
-	_log_label.text = "%s 회복  피로도 %d/%d" % [active.display_name, active.fatigue, active.max_fatigue]
+	_append_log("%s 회복  피로도 %d/%d" % [active.display_name, active.fatigue, active.max_fatigue])
 	_deselect()
 
 
@@ -752,11 +742,6 @@ func _on_end_turn_pressed() -> void:
 
 func _on_back_pressed() -> void:
 	ScreenManager.change_screen(ScreenManager.Screen.TITLE)
-
-
-# ============================================================
-# 헬퍼
-# ============================================================
 
 
 func _start_turn() -> void:
