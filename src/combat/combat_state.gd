@@ -144,6 +144,18 @@ func attack(attacker_id: String, defender_id: String) -> Dictionary:
 	return result
 
 
+func recover(unit_id: String) -> bool:
+	var unit: CombatUnit = _units.get(unit_id, null)
+	if unit == null or not unit.alive or not _is_active_unit_id(unit_id):
+		return false
+	var skill = CombatSkillRegistry.get_skill(CombatSkillRegistry.RECOVER_ID)
+	if unit.action_points < skill.action_point_cost:
+		return false
+	unit.action_points -= skill.action_point_cost
+	unit.fatigue = maxi(0, unit.fatigue - skill.fatigue_recovery)
+	return true
+
+
 func end_turn() -> void:
 	if _turn_order.is_empty():
 		return
