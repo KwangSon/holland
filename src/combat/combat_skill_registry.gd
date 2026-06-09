@@ -37,6 +37,10 @@ static func get_all_skills() -> Array:
 	return result
 
 
+static func get_attack_skill_ids() -> Array[String]:
+	return [BASIC_ATTACK_ID, SPEAR_THRUST_ID, MACE_STRIKE_ID, RANGED_SHOT_ID]
+
+
 static func _get_definitions() -> Dictionary:
 	return {
 		BASIC_ATTACK_ID:

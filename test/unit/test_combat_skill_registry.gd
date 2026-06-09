@@ -25,6 +25,13 @@ func test_registry_returns_fresh_skill_instances() -> void:
 	assert_eq(second.hit_modifier, 0)
 
 
+func test_attack_skill_ids_include_initial_weapon_attacks() -> void:
+	assert_eq(
+		CombatSkillRegistryScript.get_attack_skill_ids(),
+		["basic_attack", "spear_thrust", "mace_strike", "ranged_shot"]
+	)
+
+
 func test_weapon_family_skills_have_distinct_combat_profiles() -> void:
 	var spear = CombatSkillRegistryScript.get_skill("spear_thrust")
 	var mace = CombatSkillRegistryScript.get_skill("mace_strike")

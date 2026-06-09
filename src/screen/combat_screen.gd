@@ -44,6 +44,7 @@ var _end_turn_btn: Button
 var _attack_btn: Button
 var _attack_mode: bool = false
 var _selected_skill_id: String = CombatSkillRegistry.BASIC_ATTACK_ID
+var _skill_buttons: Dictionary = {}
 var _pause_menu: PauseMenuPopup
 
 var _result_panel: PanelContainer
@@ -251,6 +252,7 @@ func _build_bottom_panel(canvas: CanvasLayer) -> void:
 	_wait_turn_btn = CombatUi.add_button(btn_hbox, "대기", _on_wait_turn_pressed)
 	_recover_btn = CombatUi.add_button(btn_hbox, "회복", _on_recover_pressed)
 	_end_turn_btn = CombatUi.add_button(btn_hbox, "턴 종료", _on_end_turn_pressed)
+	_skill_buttons = CombatUi.add_skill_bar(action_vbox, _on_skill_pressed)
 	_attack_btn = CombatUi.add_button(action_vbox, "공격", _on_attack_pressed)
 
 	_queue_container = HBoxContainer.new()
@@ -589,13 +591,13 @@ func _refresh_ui() -> void:
 	_recover_btn.disabled = not is_player_turn or active.action_points < recover_cost
 	_end_turn_btn.disabled = not is_player_turn
 	_attack_btn.disabled = not is_player_turn
+	CombatUi.sync_skill_buttons(_skill_buttons, _selected_skill_id, is_player_turn)
 
 	if active.is_ai:
 		_unit_name_label.text = active.display_name + " (AI 차례)"
 		_unit_stats_label.text = ""
 		_move_preview_label.text = ""
 		return
-
 	_unit_name_label.text = active.display_name
 	_unit_stats_label.text = (
 		"HP %d/%d  머리갑 %d/%d  몸갑 %d/%d  AP %d/%d  피로도 %d/%d  공격력 %d"
@@ -719,6 +721,12 @@ func _on_recover_pressed() -> void:
 		return
 	_append_log("%s 회복  피로도 %d/%d" % [active.display_name, active.fatigue, active.max_fatigue])
 	_deselect()
+
+
+func _on_skill_pressed(skill_id: String) -> void:
+	_selected_skill_id = skill_id
+	_refresh_move_preview()
+	_refresh_overlays()
 
 
 func _on_attack_pressed() -> void:
