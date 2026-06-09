@@ -362,6 +362,13 @@ func _on_mouse_move() -> void:
 	var tile_local := _tile_layer.to_local(get_global_mouse_position())
 	var cell := _tile_layer.local_to_map(tile_local)
 
+	if _attack_mode:
+		_hovered_cell = cell
+		_hover_path = []
+		_refresh_attack_preview(cell)
+		_refresh_overlays()
+		return
+
 	# Check if cell is a valid move target
 	var legal_moves := _state.get_legal_moves(active.id)
 	if cell in legal_moves:
@@ -740,6 +747,11 @@ func _on_attack_pressed() -> void:
 		return
 	_attack_mode = not _attack_mode
 	_attack_btn.text = "취소" if _attack_mode else "공격"
+	if _attack_mode:
+		var tile_local := _tile_layer.to_local(get_global_mouse_position())
+		_refresh_attack_preview(_tile_layer.local_to_map(tile_local))
+	else:
+		_clear_hover_path()
 	_refresh_overlays()
 
 
@@ -894,6 +906,39 @@ func _clear_hover_path() -> void:
 	_hovered_cell = Vector2i(-1, -1)
 	_hover_path = []
 	_refresh_move_preview()
+
+
+func _refresh_attack_preview(cell: Vector2i) -> void:
+	if _move_preview_label == null:
+		return
+	if _state == null or _phase != InputPhase.UNIT_SELECTED or not _attack_mode:
+		_move_preview_label.text = ""
+		return
+
+	var active := _state.get_active_unit()
+	if active == null or active.id != _selected_id:
+		_move_preview_label.text = ""
+		return
+
+	var board := _state.get_board()
+	var defender_id: String = board.occupied.get(cell, "")
+	if defender_id == "" or not defender_id in _state.get_attack_targets(active.id):
+		_move_preview_label.text = ""
+		return
+
+	var defender := _find_unit(defender_id)
+	if defender == null:
+		_move_preview_label.text = ""
+		return
+
+	var skill = CombatRules.get_basic_attack_skill()
+	var hit_chance := CombatRules.calculate_hit_chance(
+		active, defender, board, skill, _state.get_all_units()
+	)
+	_move_preview_label.text = (
+		"공격 예측  명중 %d%%  AP %d  피로도 +%d"
+		% [hit_chance, skill.action_point_cost, skill.fatigue_cost]
+	)
 
 
 func _refresh_move_preview() -> void:
