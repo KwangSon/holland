@@ -906,12 +906,12 @@ func _refresh_attack_preview(cell: Vector2i) -> void:
 	var board := _state.get_board()
 	var defender_id: String = board.occupied.get(cell, "")
 	if defender_id == "" or not defender_id in _state.get_attack_targets(active.id):
-		_move_preview_label.text = ""
+		_show_skill_summary(active)
 		return
 
 	var defender := _find_unit(defender_id)
 	if defender == null:
-		_move_preview_label.text = ""
+		_show_skill_summary(active)
 		return
 
 	var skill = CombatRules.get_basic_attack_skill()
@@ -933,7 +933,7 @@ func _refresh_attack_preview(cell: Vector2i) -> void:
 func _refresh_move_preview() -> void:
 	if _move_preview_label == null:
 		return
-	if _state == null or _phase != InputPhase.UNIT_SELECTED or _hover_path.size() < 2:
+	if _state == null or _phase != InputPhase.UNIT_SELECTED:
 		_move_preview_label.text = ""
 		return
 
@@ -941,12 +941,29 @@ func _refresh_move_preview() -> void:
 	if active == null or active.id != _selected_id:
 		_move_preview_label.text = ""
 		return
+	if _hover_path.size() < 2:
+		_show_skill_summary(active)
+		return
 
 	var board := _state.get_board()
 	var ap_cost := CombatRules.get_path_ap_cost(_hover_path, active, board)
 	var fatigue_cost := CombatRules.get_path_fatigue_cost(_hover_path, active, board)
 	_move_preview_label.text = "이동 비용  AP %d  피로도 +%d" % [ap_cost, fatigue_cost]
 
+
+func _show_skill_summary(active: CombatUnit) -> void:
+	var skill: CombatSkillData = CombatRules.get_basic_attack_skill()
+	var target_count := _state.get_attack_targets(active.id).size()
+	_move_preview_label.text = (
+		"%s  사거리 %d  대상 %d  AP %d  피로도 +%d"
+		% [
+			skill.display_name,
+			skill.attack_range,
+			target_count,
+			skill.action_point_cost,
+			skill.fatigue_cost,
+		]
+	)
 
 func _move_unit_along_path(unit: CombatUnit, path: Array[Vector2i]) -> void:
 	if path.size() < 2:
