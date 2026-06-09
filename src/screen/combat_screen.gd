@@ -610,7 +610,7 @@ func _refresh_ui() -> void:
 	_bottom_panel.visible = true
 
 	var team_queue := _state.get_remaining_team_queue(active.team)
-	_rebuild_queue(team_queue)
+	_rebuild_queue(_state.get_remaining_turn_queue())
 
 	var is_player_turn := active.team == "player"
 	_end_round_btn.disabled = not is_player_turn

@@ -168,6 +168,15 @@ func get_remaining_team_queue(team: String) -> Array[CombatUnit]:
 	return result
 
 
+func get_remaining_turn_queue() -> Array[CombatUnit]:
+	var result: Array[CombatUnit] = []
+	for i: int in range(_turn_index, _turn_order.size()):
+		var unit: CombatUnit = _units.get(_turn_order[i], null)
+		if unit != null and unit.alive:
+			result.append(unit)
+	return result
+
+
 ## Defers the active player unit to the end of the remaining player queue.
 func wait_turn() -> void:
 	if _turn_order.is_empty():

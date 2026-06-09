@@ -180,6 +180,23 @@ func test_wait_turn_does_not_reset_waiting_unit_when_it_returns_same_round() -> 
 	assert_eq(first.action_points, 3)
 
 
+func test_remaining_turn_queue_includes_all_teams_in_order() -> void:
+	var first := _make_unit({"id": "p1", "team": "player", "initiative": 50})
+	var enemy := _make_unit(
+		{"id": "e", "team": "enemy", "position": Vector2i(1, 0), "initiative": 40}
+	)
+	var second := _make_unit(
+		{"id": "p2", "team": "player", "position": Vector2i(2, 0), "initiative": 30}
+	)
+	var state := _start_state(
+		[first, second], [enemy], [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)]
+	)
+
+	var queue := state.get_remaining_turn_queue()
+
+	assert_eq(queue.map(func(unit: CombatUnit) -> String: return unit.id), ["p1", "e", "p2"])
+
+
 func test_unit_can_move_into_hostile_zoc() -> void:
 	var player := _make_unit({"id": "p", "team": "player", "initiative": 40})
 	var enemy := _make_unit(
