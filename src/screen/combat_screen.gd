@@ -247,11 +247,11 @@ func _build_bottom_panel(canvas: CanvasLayer) -> void:
 	btn_hbox.add_theme_constant_override("separation", 6)
 	action_vbox.add_child(btn_hbox)
 
-	_end_round_btn = _add_action_button(btn_hbox, "라운드 종료", _on_end_round_pressed)
-	_wait_turn_btn = _add_action_button(btn_hbox, "대기", _on_wait_turn_pressed)
-	_recover_btn = _add_action_button(btn_hbox, "회복", _on_recover_pressed)
-	_end_turn_btn = _add_action_button(btn_hbox, "턴 종료", _on_end_turn_pressed)
-	_attack_btn = _add_action_button(action_vbox, "공격", _on_attack_pressed)
+	_end_round_btn = CombatUi.add_button(btn_hbox, "라운드 종료", _on_end_round_pressed)
+	_wait_turn_btn = CombatUi.add_button(btn_hbox, "대기", _on_wait_turn_pressed)
+	_recover_btn = CombatUi.add_button(btn_hbox, "회복", _on_recover_pressed)
+	_end_turn_btn = CombatUi.add_button(btn_hbox, "턴 종료", _on_end_turn_pressed)
+	_attack_btn = CombatUi.add_button(action_vbox, "공격", _on_attack_pressed)
 
 	_queue_container = HBoxContainer.new()
 	_queue_container.add_theme_constant_override("separation", 8)
@@ -853,14 +853,6 @@ func _rebuild_queue(queue: Array[CombatUnit]) -> void:
 		var lbl := Label.new()
 		lbl.text = ("▶ " if i == 0 else "") + queue[i].display_name
 		_queue_container.add_child(lbl)
-
-
-func _add_action_button(parent: Container, text: String, callback: Callable) -> Button:
-	var button := Button.new()
-	button.text = text
-	button.pressed.connect(callback)
-	parent.add_child(button)
-	return button
 
 
 func _count_alive(team: String) -> int:
