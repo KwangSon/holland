@@ -39,6 +39,7 @@ var _log_label: Label
 var _queue_container: HBoxContainer
 var _end_round_btn: Button
 var _wait_turn_btn: Button
+var _recover_btn: Button
 var _end_turn_btn: Button
 var _attack_btn: Button
 var _attack_mode: bool = false
@@ -65,11 +66,6 @@ func _ready() -> void:
 
 func initialize(_data: Dictionary) -> void:
 	pass
-
-
-# ============================================================
-# 초기화
-# ============================================================
 
 
 func _setup_camera() -> void:
@@ -249,26 +245,11 @@ func _build_bottom_panel(canvas: CanvasLayer) -> void:
 	btn_hbox.add_theme_constant_override("separation", 6)
 	action_vbox.add_child(btn_hbox)
 
-	_end_round_btn = Button.new()
-	_end_round_btn.text = "라운드 종료"
-	_end_round_btn.pressed.connect(_on_end_round_pressed)
-	btn_hbox.add_child(_end_round_btn)
-
-	_wait_turn_btn = Button.new()
-	_wait_turn_btn.text = "대기"
-	_wait_turn_btn.pressed.connect(_on_wait_turn_pressed)
-	btn_hbox.add_child(_wait_turn_btn)
-
-	_end_turn_btn = Button.new()
-	_end_turn_btn.text = "턴 종료"
-	_end_turn_btn.pressed.connect(_on_end_turn_pressed)
-	btn_hbox.add_child(_end_turn_btn)
-
-	# 공격 버튼 (턴 큐 위)
-	_attack_btn = Button.new()
-	_attack_btn.text = "공격"
-	_attack_btn.pressed.connect(_on_attack_pressed)
-	action_vbox.add_child(_attack_btn)
+	_end_round_btn = _add_action_button(btn_hbox, "라운드 종료", _on_end_round_pressed)
+	_wait_turn_btn = _add_action_button(btn_hbox, "대기", _on_wait_turn_pressed)
+	_recover_btn = _add_action_button(btn_hbox, "회복", _on_recover_pressed)
+	_end_turn_btn = _add_action_button(btn_hbox, "턴 종료", _on_end_turn_pressed)
+	_attack_btn = _add_action_button(action_vbox, "공격", _on_attack_pressed)
 
 	_queue_container = HBoxContainer.new()
 	_queue_container.add_theme_constant_override("separation", 8)
@@ -613,8 +594,11 @@ func _refresh_ui() -> void:
 	_rebuild_queue(_state.get_remaining_turn_queue())
 
 	var is_player_turn := active.team == "player"
+	var recover_skill: CombatSkillData = CombatSkillRegistry.get_skill(CombatSkillRegistry.RECOVER_ID)
+	var recover_cost: int = recover_skill.action_point_cost
 	_end_round_btn.disabled = not is_player_turn
 	_wait_turn_btn.disabled = not is_player_turn or team_queue.size() <= 1
+	_recover_btn.disabled = not is_player_turn or active.action_points < recover_cost
 	_end_turn_btn.disabled = not is_player_turn
 	_attack_btn.disabled = not is_player_turn
 
@@ -737,6 +721,14 @@ func _on_end_round_pressed() -> void:
 
 func _on_wait_turn_pressed() -> void:
 	_state.wait_turn()
+	_deselect()
+
+
+func _on_recover_pressed() -> void:
+	var active := _state.get_active_unit()
+	if active == null or not _state.recover(active.id):
+		return
+	_log_label.text = "%s 회복  피로도 %d/%d" % [active.display_name, active.fatigue, active.max_fatigue]
 	_deselect()
 
 
@@ -877,6 +869,14 @@ func _rebuild_queue(queue: Array[CombatUnit]) -> void:
 		var lbl := Label.new()
 		lbl.text = ("▶ " if i == 0 else "") + queue[i].display_name
 		_queue_container.add_child(lbl)
+
+
+func _add_action_button(parent: Container, text: String, callback: Callable) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.pressed.connect(callback)
+	parent.add_child(button)
+	return button
 
 
 func _count_alive(team: String) -> int:
