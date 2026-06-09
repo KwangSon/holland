@@ -52,7 +52,7 @@ var _result_btn: Button
 # Hover pathfinding
 var _hovered_cell: Vector2i = Vector2i(-1, -1)
 var _hover_path: Array[Vector2i] = []
-var _combat_log: Array[String] = []
+var _combat_log := CombatLog.new()
 
 
 func _ready() -> void:
@@ -659,10 +659,7 @@ func _log_move_result(unit: CombatUnit) -> void:
 
 
 func _append_log(message: String) -> void:
-	_combat_log.append(message)
-	while _combat_log.size() > 4:
-		_combat_log.pop_front()
-	_log_label.text = "\n".join(_combat_log)
+	_log_label.text = _combat_log.append(message)
 
 
 func _check_outcome() -> void:
