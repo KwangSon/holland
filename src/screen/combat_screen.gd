@@ -932,12 +932,18 @@ func _refresh_attack_preview(cell: Vector2i) -> void:
 		return
 
 	var skill = CombatRules.get_basic_attack_skill()
-	var hit_chance := CombatRules.calculate_hit_chance(
-		active, defender, board, skill, _state.get_all_units()
-	)
+	var preview := CombatRules.preview_attack(active, defender, board, skill, _state.get_all_units())
 	_move_preview_label.text = (
-		"공격 예측  명중 %d%%  AP %d  피로도 +%d"
-		% [hit_chance, skill.action_point_cost, skill.fatigue_cost]
+		"공격 예측  명중 %d%%  몸 갑 %d HP %d  머리 갑 %d HP %d  AP %d  피로도 +%d"
+		% [
+			preview["hit_chance"],
+			preview["body_armor_damage"],
+			preview["body_hp_damage"],
+			preview["head_armor_damage"],
+			preview["head_hp_damage"],
+			preview["action_point_cost"],
+			preview["fatigue_cost"],
+		]
 	)
 
 
@@ -959,10 +965,8 @@ func _refresh_move_preview() -> void:
 	_move_preview_label.text = "이동 비용  AP %d  피로도 +%d" % [ap_cost, fatigue_cost]
 
 
-## Move unit along path with tween animation (non-blocking)
 func _move_unit_along_path(unit: CombatUnit, path: Array[Vector2i]) -> void:
 	if path.size() < 2:
-		# Instant move if no path
 		_state.move_unit(unit.id, path[0])
 		_log_move_result(unit)
 		_refresh_overlays()

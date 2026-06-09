@@ -164,6 +164,31 @@ static func calculate_hit_chance(
 	return clampi(chance, MIN_HIT_CHANCE, MAX_HIT_CHANCE)
 
 
+static func preview_attack(
+	attacker: CombatUnit,
+	defender: CombatUnit,
+	board: CombatBoard = null,
+	skill = null,
+	all_units: Array[CombatUnit] = []
+) -> Dictionary:
+	var attack_skill = _skill_or_basic(skill)
+	var hit_chance := calculate_hit_chance(attacker, defender, board, attack_skill, all_units)
+	var raw_damage := _percent_of(attacker.damage, attack_skill.damage_percent)
+	var body_damage := roll_damage(attacker, defender, raw_damage, "body", attack_skill)
+	var head_damage := roll_damage(attacker, defender, raw_damage, "head", attack_skill)
+	return {
+		"hit_chance": hit_chance,
+		"skill_id": attack_skill.id,
+		"raw_damage": raw_damage,
+		"body_armor_damage": body_damage.get("armor_damage", 0),
+		"body_hp_damage": body_damage.get("hp_damage", 0),
+		"head_armor_damage": head_damage.get("armor_damage", 0),
+		"head_hp_damage": head_damage.get("hp_damage", 0),
+		"action_point_cost": attack_skill.action_point_cost,
+		"fatigue_cost": attack_skill.fatigue_cost,
+	}
+
+
 static func roll_body_part(
 	attacker: CombatUnit, rng: RandomNumberGenerator, skill = null
 ) -> String:
