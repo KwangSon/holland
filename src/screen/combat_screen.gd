@@ -43,6 +43,7 @@ var _recover_btn: Button
 var _end_turn_btn: Button
 var _attack_btn: Button
 var _attack_mode: bool = false
+var _selected_skill_id: String = CombatSkillRegistry.BASIC_ATTACK_ID
 var _pause_menu: PauseMenuPopup
 
 var _result_panel: PanelContainer
@@ -380,8 +381,9 @@ func _handle_cell_click(cell: Vector2i) -> void:
 
 			# Attack mode - click on tile to attack enemy on that tile
 			if _attack_mode:
-				if occupied_id != "" and occupied_id in _state.get_attack_targets(active.id):
-					var result := _state.attack(active.id, occupied_id)
+				var target_ids := _state.get_attack_targets(active.id, _selected_skill_id)
+				if occupied_id != "" and occupied_id in target_ids:
+					var result := _state.attack(active.id, occupied_id, _selected_skill_id)
 					_log_attack(result, occupied_id)
 					_attack_mode = false
 					_attack_btn.text = "공격"
@@ -395,8 +397,8 @@ func _handle_cell_click(cell: Vector2i) -> void:
 				return
 
 			# Attack?
-			if occupied_id != "" and occupied_id in _state.get_attack_targets(active.id):
-				var result := _state.attack(active.id, occupied_id)
+			if occupied_id != "" and occupied_id in _state.get_attack_targets(active.id, _selected_skill_id):
+				var result := _state.attack(active.id, occupied_id, _selected_skill_id)
 				_log_attack(result, occupied_id)
 				_deselect()
 				_check_outcome()
@@ -457,7 +459,7 @@ func _on_highlight_draw() -> void:
 		for i: int in neighbors.size():
 			_draw_hex(_highlight_layer, neighbors[i], colors[i])
 		# Show enemies in red on top
-		for uid: String in _state.get_attack_targets(_selected_id):
+		for uid: String in _state.get_attack_targets(_selected_id, _selected_skill_id):
 			var unit: CombatUnit = _find_unit(uid)
 			if unit != null:
 				_draw_hex(_highlight_layer, unit.position, Color(1.0, 0.2, 0.2, 0.8))
@@ -468,7 +470,7 @@ func _on_highlight_draw() -> void:
 		_draw_hex(_highlight_layer, cell, Color(0.2, 0.5, 1.0, 0.35))
 
 	# Attackable enemies — red
-	for uid: String in _state.get_attack_targets(_selected_id):
+	for uid: String in _state.get_attack_targets(_selected_id, _selected_skill_id):
 		var unit: CombatUnit = _find_unit(uid)
 		if unit != null:
 			_draw_hex(_highlight_layer, unit.position, Color(1.0, 0.2, 0.2, 0.45))
@@ -902,7 +904,8 @@ func _refresh_attack_preview(cell: Vector2i) -> void:
 
 	var board := _state.get_board()
 	var defender_id: String = board.occupied.get(cell, "")
-	if defender_id == "" or not defender_id in _state.get_attack_targets(active.id):
+	var target_ids := _state.get_attack_targets(active.id, _selected_skill_id)
+	if defender_id == "" or not defender_id in target_ids:
 		_show_skill_summary(active)
 		return
 
@@ -911,7 +914,7 @@ func _refresh_attack_preview(cell: Vector2i) -> void:
 		_show_skill_summary(active)
 		return
 
-	var skill = CombatRules.get_basic_attack_skill()
+	var skill: CombatSkillData = CombatSkillRegistry.get_skill(_selected_skill_id)
 	var preview := CombatRules.preview_attack(active, defender, board, skill, _state.get_all_units())
 	_move_preview_label.text = (
 		"공격 예측  명중 %d%%  몸 갑 %d HP %d  머리 갑 %d HP %d  AP %d  피로도 +%d"
@@ -949,8 +952,8 @@ func _refresh_move_preview() -> void:
 
 
 func _show_skill_summary(active: CombatUnit) -> void:
-	var skill: CombatSkillData = CombatRules.get_basic_attack_skill()
-	var target_count := _state.get_attack_targets(active.id).size()
+	var skill: CombatSkillData = CombatSkillRegistry.get_skill(_selected_skill_id)
+	var target_count := _state.get_attack_targets(active.id, _selected_skill_id).size()
 	_move_preview_label.text = (
 		"%s  사거리 %d  대상 %d  AP %d  피로도 +%d"
 		% [
