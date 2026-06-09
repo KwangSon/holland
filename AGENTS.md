@@ -38,6 +38,19 @@ This project uses [GDScript Toolkit](https://github.com/Scony/godot-gdscript-too
 ./godot --headless -d -s --path "$PWD" addons/gut/gut_cmdln.gd -gtest=test_example.gd
 ```
 
+#### Refreshing Godot Imports
+
+After code, asset, or resource changes that require Godot import metadata to update, run the
+editor once in headless mode before testing.
+
+```bash
+# From inside the project root
+./godot --headless --editor --path "$PWD" --quit
+
+# When invoking Godot from outside the project
+./godot --headless --editor --path /path/to/your/project --quit
+```
+
 ### Best Practices
 
 1. **Use type hints** for all variables and function return types
