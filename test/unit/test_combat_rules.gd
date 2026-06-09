@@ -36,6 +36,8 @@ func test_roll_attack_deterministic_with_same_seed() -> void:
 	var result1 := CombatRules.roll_attack(atk, def1, _make_rng(42))
 	var result2 := CombatRules.roll_attack(atk, def2, _make_rng(42))
 	assert_eq(result1["hit"], result2["hit"])
+	assert_eq(result1["hit_chance"], result2["hit_chance"])
+	assert_eq(result1["roll"], result2["roll"])
 	assert_eq(result1["raw_damage"], result2["raw_damage"])
 	assert_eq(result1["hp_damage"], result2["hp_damage"])
 	assert_eq(result1["hp_damage"], 15)

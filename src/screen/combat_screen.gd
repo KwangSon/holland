@@ -650,19 +650,17 @@ func _log_attack(result: Dictionary, defender_id: String) -> void:
 	if result.get("hit", false):
 		var part := "머리" if result.get("body_part", "body") == "head" else "몸"
 		var msg := (
-			"공격 → %s %s  갑옷 %d  HP %d"
-			% [
-				name_str,
-				part,
-				result.get("armor_damage", 0),
-				result.get("hp_damage", 0),
-			]
+			"공격 → %s %s  명중 %d%%  굴림 %d  갑옷 %d  HP %d"
+			% [name_str, part, result.get("hit_chance", 0), result.get("roll", 0),
+				result.get("armor_damage", 0), result.get("hp_damage", 0)]
 		)
 		if result.get("killed", false):
 			msg += "  [사망]"
 		_log_label.text = msg
 	else:
-		_log_label.text = "공격 → %s  빗나감" % [name_str]
+		_log_label.text = (
+			"공격 → %s  명중 %d%%  굴림 %d  빗나감"
+			% [name_str, result.get("hit_chance", 0), result.get("roll", 0)])
 
 
 func _log_move_result(unit: CombatUnit) -> void:
