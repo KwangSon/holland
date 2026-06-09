@@ -85,11 +85,14 @@ func get_legal_moves(unit_id: String) -> Array[Vector2i]:
 	return CombatRules.get_legal_moves(unit, _board)
 
 
-func get_attack_targets(unit_id: String) -> Array[String]:
+func get_attack_targets(
+	unit_id: String, skill_id: String = CombatSkillRegistry.BASIC_ATTACK_ID
+) -> Array[String]:
 	var unit: CombatUnit = _units.get(unit_id, null)
 	if unit == null or not _is_active_unit_id(unit_id):
 		return []
-	return CombatRules.get_attack_targets(unit, _board, get_all_units())
+	var skill: CombatSkillData = CombatSkillRegistry.get_skill(skill_id)
+	return CombatRules.get_attack_targets(unit, _board, get_all_units(), skill)
 
 
 func move_unit(unit_id: String, target: Vector2i) -> bool:
@@ -121,14 +124,18 @@ func move_unit(unit_id: String, target: Vector2i) -> bool:
 
 
 ## Returns the roll_attack result dict, plus "killed" key.
-func attack(attacker_id: String, defender_id: String) -> Dictionary:
+func attack(
+	attacker_id: String,
+	defender_id: String,
+	skill_id: String = CombatSkillRegistry.BASIC_ATTACK_ID
+) -> Dictionary:
 	var attacker: CombatUnit = _units.get(attacker_id, null)
 	var defender: CombatUnit = _units.get(defender_id, null)
 	if attacker == null or defender == null:
 		return {}
 	if not attacker.alive or not defender.alive or not _is_active_unit_id(attacker_id):
 		return {}
-	var skill: Object = CombatRules.get_basic_attack_skill()
+	var skill: CombatSkillData = CombatSkillRegistry.get_skill(skill_id)
 	if not defender_id in CombatRules.get_attack_targets(attacker, _board, get_all_units(), skill):
 		return {}
 

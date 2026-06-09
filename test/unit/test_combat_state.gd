@@ -115,6 +115,21 @@ func test_attack_consumes_ap_and_fatigue() -> void:
 	assert_eq(player.fatigue, 30)
 
 
+func test_attack_with_skill_id_uses_skill_range_and_costs() -> void:
+	var player := _make_unit({"id": "p", "team": "player", "initiative": 40})
+	var enemy := _make_unit({"id": "e", "team": "enemy", "position": Vector2i(2, 0)})
+	var cells: Array[Vector2i] = [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)]
+	var state := _start_state([player], [enemy], cells)
+
+	assert_eq(state.get_attack_targets("p").size(), 0)
+	assert_eq(state.get_attack_targets("p", CombatSkillRegistry.RANGED_SHOT_ID), ["e"])
+
+	var result := state.attack("p", "e", CombatSkillRegistry.RANGED_SHOT_ID)
+	assert_eq(result.get("skill_id", ""), CombatSkillRegistry.RANGED_SHOT_ID)
+	assert_eq(player.action_points, 5)
+	assert_eq(player.fatigue, 20)
+
+
 func test_unit_can_attack_multiple_times_while_ap_and_fatigue_allow() -> void:
 	var player := _make_unit({"id": "p", "team": "player", "initiative": 40})
 	var enemy := _make_unit({"id": "e", "team": "enemy", "position": Vector2i(1, 0), "max_hp": 40})
