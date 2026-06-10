@@ -2,6 +2,7 @@ class_name CombatScreen extends Node2D
 
 enum InputPhase { IDLE, UNIT_SELECTED }
 
+const CombatAiScript := preload("res://src/combat/combat_ai.gd")
 const TILE_SET := preload("res://asset/hex_tile.tres")
 const SOURCE_ID := 0
 const EMPTY_TILE := -1
@@ -757,48 +758,19 @@ func _run_ai_turn(active: CombatUnit) -> void:
 	if _state.get_outcome() != "ongoing" or not active.alive:
 		return
 
-	var all_units := _state.get_all_units()
-	var enemies: Array[CombatUnit] = []
-	for u in all_units:
-		if u.alive and u.team != active.team:
-			enemies.append(u)
-
-	if enemies.is_empty():
+	var action: Dictionary = CombatAiScript.select_action(active, _state)
+	if action.is_empty():
 		_state.end_turn()
 		_deselect()
 		return
 
-	var board := _state.get_board()
-	var closest_enemy: CombatUnit = null
-	var min_dist := 999999
-	for e in enemies:
-		var dist: int = board.hex_distance(active.position, e.position)
-		if dist < min_dist:
-			min_dist = dist
-			closest_enemy = e
-
-	if closest_enemy == null:
-		_state.end_turn()
-		_deselect()
-		return
-
-	# 이동 가능한 칸 중 적과 가장 가까운 곳 선택
-	var legal_moves := _state.get_legal_moves(active.id)
-	var best_move := active.position
-	var best_dist: int = board.hex_distance(active.position, closest_enemy.position)
-
-	for cell in legal_moves:
-		var dist: int = board.hex_distance(cell, closest_enemy.position)
-		if dist < best_dist:
-			best_dist = dist
-			best_move = cell
-
-	if best_move != active.position:
-		var path := _state.get_board().find_path(active.position, best_move)
+	var move_cell: Vector2i = action.get("move_cell", active.position)
+	if move_cell != active.position:
+		var path := _state.get_board().find_path(active.position, move_cell)
 		if path.size() > 1:
 			_move_unit_along_path(active, path)
 		else:
-			_state.move_unit(active.id, best_move)
+			_state.move_unit(active.id, move_cell)
 			_log_move_result(active)
 			_refresh_overlays()
 			_refresh_ui()
@@ -807,17 +779,11 @@ func _run_ai_turn(active: CombatUnit) -> void:
 	if _state.get_outcome() != "ongoing" or not active.alive:
 		return
 
-	# 공격
-	var targets := _state.get_attack_targets(active.id)
-	if targets.has(closest_enemy.id):
-		var result := _state.attack(active.id, closest_enemy.id)
-		_log_attack(result, closest_enemy.id)
-		_refresh_overlays()
-		_refresh_ui()
-		await get_tree().create_timer(0.5).timeout
-	elif targets.size() > 0:
-		var result := _state.attack(active.id, targets[0])
-		_log_attack(result, targets[0])
+	var target_id: String = action.get("attack_target_id", "")
+	var skill_id: String = action.get("attack_skill_id", CombatSkillRegistry.BASIC_ATTACK_ID)
+	if not target_id.is_empty():
+		var result := _state.attack(active.id, target_id, skill_id)
+		_log_attack(result, target_id)
 		_refresh_overlays()
 		_refresh_ui()
 		await get_tree().create_timer(0.5).timeout

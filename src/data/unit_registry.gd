@@ -36,6 +36,7 @@ static func player_units() -> Array[CombatUnit]:
 					"damage": 10,
 					"armor_penetration": 25,
 					"chance_to_hit_head": 25,
+					"skill_ids": [CombatSkillRegistry.BASIC_ATTACK_ID, CombatSkillRegistry.SHIELDWALL_ID],
 				}
 			)
 		),
@@ -62,6 +63,7 @@ static func player_units() -> Array[CombatUnit]:
 					"damage": 12,
 					"armor_penetration": 30,
 					"chance_to_hit_head": 25,
+					"skill_ids": [CombatSkillRegistry.BASIC_ATTACK_ID, CombatSkillRegistry.MACE_STRIKE_ID],
 				}
 			)
 		),
@@ -90,6 +92,7 @@ static func player_units() -> Array[CombatUnit]:
 					"chance_to_hit_head": 30,
 					"ammo": 12,
 					"max_ammo": 12,
+					"skill_ids": [CombatSkillRegistry.RANGED_SHOT_ID, CombatSkillRegistry.BASIC_ATTACK_ID],
 				}
 			)
 		),
@@ -125,6 +128,7 @@ static func enemy_units() -> Array[CombatUnit]:
 					"ammo": 8,
 					"max_ammo": 8,
 					"is_ai": true,
+					"skill_ids": [CombatSkillRegistry.RANGED_SHOT_ID, CombatSkillRegistry.BASIC_ATTACK_ID],
 				}
 			)
 		),
@@ -154,6 +158,7 @@ static func enemy_units() -> Array[CombatUnit]:
 					"ammo": 6,
 					"max_ammo": 6,
 					"is_ai": true,
+					"skill_ids": [CombatSkillRegistry.RANGED_SHOT_ID, CombatSkillRegistry.BASIC_ATTACK_ID],
 				}
 			)
 		),

@@ -28,6 +28,7 @@ func test_enemy_archetype_creates_ai_combat_unit() -> void:
 	assert_eq(unit.position, Vector2i(3, 4))
 	assert_gt(unit.ranged_skill, unit.melee_skill)
 	assert_gt(unit.ammo, 0)
+	assert_eq(unit.skill_ids, [CombatSkillRegistry.RANGED_SHOT_ID])
 
 
 func test_encounter_registry_creates_basic_encounters() -> void:

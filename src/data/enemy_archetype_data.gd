@@ -25,4 +25,5 @@ func create_unit(unit_id: String, position: Vector2i) -> CombatUnit:
 	data["team"] = "enemy"
 	data["position"] = position
 	data["is_ai"] = true
+	data["skill_ids"] = skill_ids.duplicate()
 	return CombatUnit.create(data)

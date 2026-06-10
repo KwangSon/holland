@@ -10,6 +10,7 @@ var head_armor_item = null
 var body_armor_item = null
 var accessory = null
 var trait_ids: Array[String] = []
+var skill_ids: Array[String] = []
 
 # === Base Stats (without equipment) ===
 var base_head_armor: int = 0
@@ -95,6 +96,7 @@ static func create(data: Dictionary) -> CombatUnit:
 	u.body_armor_item = data.get("body_armor_item", null)
 	u.accessory = data.get("accessory", null)
 	u.trait_ids.assign(data.get("trait_ids", []))
+	u.skill_ids.assign(data.get("skill_ids", []))
 
 	# Base Stats
 	u.base_head_armor = data.get("head_armor", 0)
