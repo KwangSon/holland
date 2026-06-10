@@ -52,6 +52,7 @@ func test_roll_attack_result_has_stable_action_result_keys() -> void:
 		"armor_after",
 		"hp_damage",
 		"killed",
+		"morale_checks",
 	]:
 		assert_true(result.has(key), "missing key: %s" % key)
 

@@ -13,6 +13,11 @@ const SURROUND_DEFENSE_PENALTY_PER_UNIT: int = 5
 const ARMOR_DAMAGE_PERCENT: int = 100
 const ARMOR_HP_DAMAGE_REDUCTION_PERCENT: int = 10
 const HEAD_HP_DAMAGE_PERCENT: int = 150
+const MIN_MORALE_CHANCE: int = 5
+const MAX_MORALE_CHANCE: int = 95
+const LARGE_DAMAGE_MORALE_HP_PERCENT: int = 25
+const LARGE_DAMAGE_MORALE_PENALTY: int = 20
+const ALLY_DEATH_MORALE_PENALTY: int = 30
 
 
 ## Returns passable cells the unit can move to this turn.
@@ -169,6 +174,7 @@ static func roll_attack(
 		"armor_after": damage_result.get("armor_after", 0),
 		"hp_damage": damage_result.get("hp_damage", 0),
 		"killed": false,
+		"morale_checks": [],
 	}
 
 
@@ -271,6 +277,32 @@ static func roll_damage(
 		"armor_damage": armor_damage,
 		"armor_after": armor_after,
 		"hp_damage": hp_damage,
+	}
+
+
+static func should_check_large_damage_morale(unit: CombatUnit, hp_damage: int) -> bool:
+	if hp_damage <= 0 or not unit.alive:
+		return false
+	return hp_damage * 100 >= unit.max_hp * LARGE_DAMAGE_MORALE_HP_PERCENT
+
+
+static func roll_morale_check(
+	unit: CombatUnit, rng: RandomNumberGenerator, penalty: int, reason: String
+) -> Dictionary:
+	var chance := clampi(unit.resolve - penalty, MIN_MORALE_CHANCE, MAX_MORALE_CHANCE)
+	var roll := rng.randi_range(1, 100)
+	var previous_state := unit.get_morale_state_name()
+	var passed := roll <= chance
+	if not passed:
+		unit.adjust_morale_state(-1)
+	return {
+		"unit_id": unit.id,
+		"reason": reason,
+		"chance": chance,
+		"roll": roll,
+		"passed": passed,
+		"previous_state": previous_state,
+		"new_state": unit.get_morale_state_name(),
 	}
 
 

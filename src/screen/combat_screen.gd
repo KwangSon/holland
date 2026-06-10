@@ -599,6 +599,10 @@ func _log_attack(result: Dictionary, defender_id: String) -> void:
 	var defender := _find_unit(defender_id)
 	var name_str := defender.display_name if defender != null else defender_id
 	_append_log(CombatUi.format_attack_log(result, name_str))
+	for check: Dictionary in result.get("morale_checks", []):
+		var unit := _find_unit(check.get("unit_id", ""))
+		var unit_name: String = unit.display_name if unit != null else check.get("unit_id", "")
+		_append_log(CombatUi.format_morale_check(check, unit_name))
 
 
 func _log_move_result(unit: CombatUnit) -> void:

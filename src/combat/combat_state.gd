@@ -168,6 +168,7 @@ func attack(
 	var result := CombatRules.roll_attack(attacker, defender, _rng, _board, skill, get_all_units())
 	CombatRules.apply_attack_result(defender, result)
 	result["killed"] = not defender.alive
+	result["morale_checks"] = _resolve_attack_morale_checks(defender, result)
 	attacker.action_points -= skill.action_point_cost
 	attacker.fatigue += skill.fatigue_cost
 	attacker.ammo -= skill.ammo_cost
@@ -375,6 +376,7 @@ func _resolve_zoc_escape_attacks(unit: CombatUnit, path: Array[Vector2i]) -> Dic
 			attack_result["attacker_id"] = controller.id
 			attack_result["defender_id"] = unit.id
 			attack_result["killed"] = not unit.alive
+			attack_result["morale_checks"] = _resolve_attack_morale_checks(unit, attack_result)
 			result["zoc_attacks"].append(attack_result)
 			if attack_result.get("hit", false):
 				result["blocked_by_zoc"] = true
@@ -382,6 +384,26 @@ func _resolve_zoc_escape_attacks(unit: CombatUnit, path: Array[Vector2i]) -> Dic
 					_remove_dead_unit(unit.id)
 				return result
 	return result
+
+
+func _resolve_attack_morale_checks(defender: CombatUnit, attack_result: Dictionary) -> Array:
+	var checks: Array = []
+	if attack_result.get("killed", false):
+		for unit: CombatUnit in get_all_units():
+			if unit.id == defender.id or unit.team != defender.team or not unit.alive:
+				continue
+			checks.append(
+				CombatRules.roll_morale_check(
+					unit, _rng, CombatRules.ALLY_DEATH_MORALE_PENALTY, "ally_death"
+				)
+			)
+	elif CombatRules.should_check_large_damage_morale(defender, attack_result.get("hp_damage", 0)):
+		checks.append(
+			CombatRules.roll_morale_check(
+				defender, _rng, CombatRules.LARGE_DAMAGE_MORALE_PENALTY, "large_damage"
+			)
+		)
+	return checks
 
 
 func _remove_dead_unit(unit_id: String) -> void:

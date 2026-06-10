@@ -2,6 +2,8 @@ class_name CombatUnit
 
 enum UnitType { NONE, PRIEST, ANATOMIST, BOWYER, GOBLIN_AMBUSHER, NECROMANCER }
 
+enum MoraleState { BREAKING, WAVERING, STEADY, CONFIDENT }
+
 # === Equipment Slots ===
 var weapon = null
 var head_armor_item = null
@@ -73,6 +75,7 @@ var visual_position: Vector2 = Vector2.ZERO
 var alive: bool = true
 var has_acted: bool = false
 var status_turns: Dictionary = {}
+var morale_state: MoraleState = MoraleState.STEADY
 
 
 static func create(data: Dictionary) -> CombatUnit:
@@ -84,6 +87,7 @@ static func create(data: Dictionary) -> CombatUnit:
 	u.sprite_texture = data.get("sprite_texture", null)
 	u.is_ai = data.get("is_ai", false)
 	u.position = data.get("position", Vector2i.ZERO)
+	u.morale_state = data.get("morale_state", MoraleState.STEADY)
 
 	# Equipment
 	u.weapon = data.get("weapon", null)
@@ -240,6 +244,26 @@ func tick_statuses() -> void:
 		status_turns[status_id] -= 1
 		if status_turns[status_id] <= 0:
 			status_turns.erase(status_id)
+
+
+func get_morale_state_name() -> String:
+	match morale_state:
+		MoraleState.CONFIDENT:
+			return "confident"
+		MoraleState.STEADY:
+			return "steady"
+		MoraleState.WAVERING:
+			return "wavering"
+		MoraleState.BREAKING:
+			return "breaking"
+		_:
+			return "steady"
+
+
+func adjust_morale_state(delta: int) -> void:
+	morale_state = (
+		clampi(morale_state + delta, MoraleState.BREAKING, MoraleState.CONFIDENT) as MoraleState
+	)
 
 
 func get_current_initiative() -> int:

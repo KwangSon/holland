@@ -45,7 +45,7 @@ static func sync_skill_buttons(
 static func format_unit_stats(unit: CombatUnit) -> String:
 	return (
 		"HP %d/%d  머리갑 %d/%d  몸갑 %d/%d  AP %d/%d  피로도 %d/%d\n"
-		+ "탄약 %d/%d  사기 %d  결의 %d  근공 %d  원공 %d  근방 %d  원방 %d  공격력 %d"
+		+ "탄약 %d/%d  사기 %s(%d)  결의 %d  근공 %d  원공 %d  근방 %d  원방 %d  공격력 %d"
 	) % [
 		unit.hp,
 		unit.max_hp,
@@ -59,6 +59,7 @@ static func format_unit_stats(unit: CombatUnit) -> String:
 		unit.max_fatigue,
 		unit.ammo,
 		unit.max_ammo,
+		unit.get_morale_state_name(),
 		unit.morale,
 		unit.resolve,
 		unit.melee_skill,
@@ -97,6 +98,23 @@ static func format_attack_log(result: Dictionary, defender_name: String) -> Stri
 	if result.get("killed", false):
 		text += "  [사망]"
 	return text
+
+
+static func format_morale_check(check: Dictionary, unit_name: String) -> String:
+	var reason := "큰 피해" if check.get("reason", "") == "large_damage" else "아군 사망"
+	var outcome := "유지" if check.get("passed", false) else "저하"
+	return (
+		"%s 사기 체크(%s)  확률 %d%%  굴림 %d  %s: %s→%s"
+		% [
+			unit_name,
+			reason,
+			check.get("chance", 0),
+			check.get("roll", 0),
+			outcome,
+			check.get("previous_state", "steady"),
+			check.get("new_state", "steady"),
+		]
+	)
 
 
 static func format_attack_preview(preview: Dictionary) -> String:
