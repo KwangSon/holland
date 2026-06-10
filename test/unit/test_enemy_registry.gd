@@ -40,6 +40,15 @@ func test_encounter_registry_creates_basic_encounters() -> void:
 	assert_true(EncounterRegistryScript.BEAST_SKIRMISH_ID in encounter_ids)
 
 
+func test_encounter_data_serializes_to_rna_reference() -> void:
+	var encounter = EncounterRegistryScript.get_encounter(EncounterRegistryScript.BEAST_SKIRMISH_ID)
+	var rna: Dictionary = encounter.to_rna()
+
+	assert_eq(rna.get("encounter_id"), EncounterRegistryScript.BEAST_SKIRMISH_ID)
+	assert_eq(rna.get("seed"), encounter.encounter_seed)
+	assert_false(rna.has("enemies"))
+
+
 func test_bandit_encounter_has_three_enemy_roles() -> void:
 	var encounter = EncounterRegistryScript.get_encounter(EncounterRegistryScript.BANDIT_SKIRMISH_ID)
 	var units: Array[CombatUnit] = encounter.create_enemy_units()

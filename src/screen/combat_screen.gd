@@ -3,6 +3,7 @@ class_name CombatScreen extends Node2D
 enum InputPhase { IDLE, UNIT_SELECTED }
 
 const CombatAiScript := preload("res://src/combat/combat_ai.gd")
+const EncounterRegistryScript := preload("res://src/data/encounter_registry.gd")
 const TILE_SET := preload("res://asset/hex_tile.tres")
 const SOURCE_ID := 0
 const EMPTY_TILE := -1
@@ -108,10 +109,11 @@ func _setup_combat() -> void:
 				tile_data_by_cell[Vector2i(x, y)] = _get_test_map_tile_data(tile_index)
 
 	var encounter: Dictionary = SaveManager.rna.get("encounter", {})
+	var enemy_units := _enemy_units_from_encounter(encounter)
 	_state = CombatState.new()
 	_state.start_encounter_tiles(
 		_units_from_rna(SaveManager.rna.get("party", [])),
-		_units_from_rna(encounter.get("enemies", [])),
+		enemy_units,
 		tile_data_by_cell,
 		encounter.get("seed", 0)
 	)
@@ -138,6 +140,12 @@ func _units_from_rna(entries: Array) -> Array[CombatUnit]:
 	for entry: Dictionary in entries:
 		result.append(CombatUnit.create(entry))
 	return result
+
+
+func _enemy_units_from_encounter(encounter: Dictionary) -> Array[CombatUnit]:
+	if encounter.has("encounter_id"):
+		return EncounterRegistryScript.get_encounter(encounter["encounter_id"]).create_enemy_units()
+	return _units_from_rna(encounter.get("enemies", []))
 
 
 ## Overlay layers are added AFTER the tile layer so they draw on top.

@@ -1,85 +1,10 @@
 class_name ExploreScreen extends Node2D
 
 const MAP_TEXTURE := preload("res://asset/map.jpg")
+const EncounterRegistryScript := preload("res://src/data/encounter_registry.gd")
 const MARKER_RADIUS := 10.0
 const TWEEN_DURATION := 0.25
 const ZONE_RADIUS := 80.0
-
-## 마을/POI 정의 — {name, position, encounter}
-const VILLAGE_ZONES: Array[Dictionary] = [
-	{
-		"name": "성채",
-		"position": Vector2(490, 420),
-		"encounter":
-		{
-			"enemies":
-			[
-				{
-					"id": "e1",
-					"display_name": "도적",
-					"team": "enemy",
-					"position": Vector2i(7, 3),
-					"max_hp": 30,
-					"max_fatigue": 90,
-					"damage": 10,
-					"is_ai": true,
-				},
-				{
-					"id": "e2",
-					"display_name": "중갑병",
-					"team": "enemy",
-					"position": Vector2i(6, 4),
-					"max_hp": 55,
-					"max_fatigue": 110,
-					"damage": 14,
-					"is_ai": true,
-				},
-			],
-			"seed": 42,
-		},
-	},
-	{
-		"name": "폐허",
-		"position": Vector2(850, 140),
-		"encounter":
-		{
-			"enemies":
-			[
-				{
-					"id": "e1",
-					"display_name": "해골 전사",
-					"team": "enemy",
-					"position": Vector2i(7, 3),
-					"max_hp": 25,
-					"max_fatigue": 80,
-					"damage": 12,
-					"is_ai": true,
-				},
-				{
-					"id": "e2",
-					"display_name": "해골 궁수",
-					"team": "enemy",
-					"position": Vector2i(7, 5),
-					"max_hp": 20,
-					"max_fatigue": 70,
-					"damage": 15,
-					"is_ai": true,
-				},
-				{
-					"id": "e3",
-					"display_name": "네크로맨서",
-					"team": "enemy",
-					"position": Vector2i(6, 4),
-					"max_hp": 35,
-					"max_fatigue": 100,
-					"damage": 18,
-					"is_ai": true,
-				},
-			],
-			"seed": 99,
-		},
-	},
-]
 
 var _marker: Node2D
 var _marker_area: Area2D
@@ -130,18 +55,39 @@ func _setup_zones() -> void:
 	_zone_layer = Node2D.new()
 	_zone_layer.name = "ZoneLayer"
 	add_child(_zone_layer)
-	for data: Dictionary in VILLAGE_ZONES:
+	for data: Dictionary in _get_village_zones():
+		var encounter = EncounterRegistryScript.get_encounter(data["encounter_id"])
 		var zone := (
 			VillageZone
 			. create_zone(
 				data["name"],
 				data["position"],
 				ZONE_RADIUS,
-				data["encounter"],
+				encounter.to_rna(),
 			)
 		)
 		zone.marker_entered.connect(_on_zone_entered)
 		_zone_layer.add_child(zone)
+
+
+func _get_village_zones() -> Array[Dictionary]:
+	return [
+		{
+			"name": "성채",
+			"position": Vector2(490, 420),
+			"encounter_id": EncounterRegistryScript.BANDIT_SKIRMISH_ID,
+		},
+		{
+			"name": "폐허",
+			"position": Vector2(850, 140),
+			"encounter_id": EncounterRegistryScript.UNDEAD_SKIRMISH_ID,
+		},
+		{
+			"name": "거미 숲",
+			"position": Vector2(230, 180),
+			"encounter_id": EncounterRegistryScript.BEAST_SKIRMISH_ID,
+		},
+	]
 
 
 func _setup_marker() -> void:

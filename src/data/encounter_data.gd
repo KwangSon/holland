@@ -20,3 +20,11 @@ static func create(data: Dictionary):
 
 func create_enemy_units() -> Array[CombatUnit]:
 	return EnemyRegistryScript.create_units(enemy_entries)
+
+
+func to_rna() -> Dictionary:
+	return {
+		"encounter_id": id,
+		"display_name": display_name,
+		"seed": encounter_seed,
+	}
