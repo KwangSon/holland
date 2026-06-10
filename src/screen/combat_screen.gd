@@ -691,6 +691,15 @@ func _on_recover_pressed() -> void:
 
 func _on_skill_pressed(skill_id: String) -> void:
 	_selected_skill_id = skill_id
+	var active := _state.get_active_unit()
+	var skill: CombatSkillData = CombatSkillRegistry.get_skill(skill_id)
+	if active != null and "status" in skill.tags:
+		var result := _state.use_skill(active.id, skill_id)
+		if result.is_empty():
+			return
+		_append_log(CombatUi.format_skill_use(result, active.display_name))
+		_deselect()
+		return
 	_refresh_move_preview()
 	_refresh_overlays()
 

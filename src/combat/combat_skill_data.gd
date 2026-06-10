@@ -15,6 +15,8 @@ var head_hit_modifier: int = 0
 var fatigue_recovery: int = 0
 var distance_penalty_per_tile: int = 0
 var ignore_first_tile_for_distance: bool = true
+var status_effect_id: String = ""
+var status_duration_turns: int = 0
 var tags: Array[String] = []
 
 
@@ -34,6 +36,8 @@ static func create(data: Dictionary):
 	skill.fatigue_recovery = data.get("fatigue_recovery", 0)
 	skill.distance_penalty_per_tile = data.get("distance_penalty_per_tile", 0)
 	skill.ignore_first_tile_for_distance = data.get("ignore_first_tile_for_distance", true)
+	skill.status_effect_id = data.get("status_effect_id", "")
+	skill.status_duration_turns = data.get("status_duration_turns", 0)
 	skill.tags.assign(data.get("tags", []))
 	return skill
 

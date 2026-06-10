@@ -52,6 +52,8 @@ func test_utility_skills_define_costs_and_tags() -> void:
 	var recover = CombatSkillRegistryScript.get_skill("recover")
 	var footwork = CombatSkillRegistryScript.get_skill("footwork")
 	assert_true("shield" in shieldwall.tags)
+	assert_eq(shieldwall.status_effect_id, "shieldwall")
+	assert_eq(shieldwall.status_duration_turns, 2)
 	assert_eq(wait.action_point_cost, 0)
 	assert_eq(recover.action_point_cost, 9)
 	assert_eq(recover.fatigue_recovery, 30)

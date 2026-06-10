@@ -16,6 +16,7 @@ static func add_skill_bar(parent: Container, callback: Callable) -> Dictionary:
 	var buttons: Dictionary = {}
 	var skill_ids := CombatSkillRegistry.get_attack_skill_ids()
 	skill_ids.append(CombatSkillRegistry.FOOTWORK_ID)
+	skill_ids.append(CombatSkillRegistry.SHIELDWALL_ID)
 	for skill_id: String in skill_ids:
 		var skill: CombatSkillData = CombatSkillRegistry.get_skill(skill_id)
 		var button := add_button(row, _format_skill_label(skill), callback.bind(skill_id))
@@ -113,6 +114,20 @@ static func format_morale_check(check: Dictionary, unit_name: String) -> String:
 			outcome,
 			check.get("previous_state", "steady"),
 			check.get("new_state", "steady"),
+		]
+	)
+
+
+static func format_skill_use(result: Dictionary, unit_name: String) -> String:
+	return (
+		"%s %s  %s %d턴  AP %d  피로도 +%d"
+		% [
+			unit_name,
+			result.get("skill_display_name", result.get("skill_id", "스킬")),
+			result.get("status_display_name", result.get("status_effect_id", "상태")),
+			result.get("status_duration_turns", 0),
+			result.get("action_point_cost", 0),
+			result.get("fatigue_cost", 0),
 		]
 	)
 

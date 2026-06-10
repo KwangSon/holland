@@ -2,6 +2,9 @@ class_name CombatSkillRegistry
 extends RefCounted
 
 const CombatSkillDataScript := preload("res://src/combat/combat_skill_data.gd")
+const CombatStatusEffectRegistryScript := preload(
+	"res://src/combat/combat_status_effect_registry.gd"
+)
 
 const BASIC_ATTACK_ID: String = "basic_attack"
 const SPEAR_THRUST_ID: String = "spear_thrust"
@@ -100,6 +103,8 @@ static func _get_definitions() -> Dictionary:
 			"action_point_cost": 4,
 			"fatigue_cost": 20,
 			"attack_range": 0,
+			"status_effect_id": CombatStatusEffectRegistryScript.SHIELDWALL_ID,
+			"status_duration_turns": 2,
 			"tags": ["defense", "shield", "status"],
 		},
 		WAIT_ID:

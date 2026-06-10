@@ -179,6 +179,38 @@ func attack(
 	return result
 
 
+func use_skill(unit_id: String, skill_id: String) -> Dictionary:
+	var unit: CombatUnit = _units.get(unit_id, null)
+	if unit == null or not unit.alive or not _is_active_unit_id(unit_id):
+		return {}
+	var skill: CombatSkillData = CombatSkillRegistry.get_skill(skill_id)
+	if skill.status_effect_id.is_empty():
+		return {}
+	if CombatStatusEffectRegistryScript.blocks_actions(unit.get_status_ids()):
+		return {}
+	if unit.action_points < skill.action_point_cost:
+		return {}
+	if unit.fatigue + skill.fatigue_cost > unit.max_fatigue:
+		return {}
+	var status = CombatStatusEffectRegistryScript.get_status(skill.status_effect_id)
+	var duration: int = (
+		skill.status_duration_turns if skill.status_duration_turns > 0 else status.duration_turns
+	)
+	unit.apply_status(skill.status_effect_id, duration)
+	unit.action_points -= skill.action_point_cost
+	unit.fatigue += skill.fatigue_cost
+	return {
+		"unit_id": unit.id,
+		"skill_id": skill.id,
+		"skill_display_name": skill.display_name,
+		"status_effect_id": skill.status_effect_id,
+		"status_display_name": status.display_name,
+		"status_duration_turns": duration,
+		"action_point_cost": skill.action_point_cost,
+		"fatigue_cost": skill.fatigue_cost,
+	}
+
+
 func recover(unit_id: String) -> bool:
 	var unit: CombatUnit = _units.get(unit_id, null)
 	if unit == null or not unit.alive or not _is_active_unit_id(unit_id):

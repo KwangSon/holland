@@ -31,6 +31,8 @@ func test_create_assigns_optional_combat_modifiers() -> void:
 				"fatigue_recovery": 20,
 				"distance_penalty_per_tile": 6,
 				"ignore_first_tile_for_distance": false,
+				"status_effect_id": "stunned",
+				"status_duration_turns": 2,
 				"tags": ["melee", "heavy"],
 			}
 		)
@@ -45,4 +47,6 @@ func test_create_assigns_optional_combat_modifiers() -> void:
 	assert_eq(skill.fatigue_recovery, 20)
 	assert_eq(skill.distance_penalty_per_tile, 6)
 	assert_false(skill.ignore_first_tile_for_distance)
+	assert_eq(skill.status_effect_id, "stunned")
+	assert_eq(skill.status_duration_turns, 2)
 	assert_true("heavy" in skill.tags)

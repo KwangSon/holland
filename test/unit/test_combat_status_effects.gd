@@ -77,6 +77,37 @@ func test_shieldwall_status_increases_defense_for_hit_chance() -> void:
 	assert_eq(CombatRules.calculate_hit_chance(attacker, defender), 25)
 
 
+func test_shieldwall_skill_applies_status_and_consumes_costs() -> void:
+	var player := _make_unit({"id": "p", "team": "player", "initiative": 40})
+	var enemy := _make_unit({"id": "e", "team": "enemy", "position": Vector2i(1, 0)})
+	var state := _start_state(player, enemy)
+
+	var result := state.use_skill("p", CombatSkillRegistry.SHIELDWALL_ID)
+
+	assert_eq(result.get("status_effect_id", ""), StatusRegistry.SHIELDWALL_ID)
+	assert_true(player.has_status(StatusRegistry.SHIELDWALL_ID))
+	assert_eq(player.status_turns[StatusRegistry.SHIELDWALL_ID], 2)
+	assert_eq(player.action_points, 5)
+	assert_eq(player.fatigue, 20)
+	assert_eq(CombatRules.calculate_hit_chance(enemy, player), 25)
+
+	state.end_turn()
+
+	assert_true(player.has_status(StatusRegistry.SHIELDWALL_ID))
+
+	state.end_turn()
+
+	assert_true(player.has_status(StatusRegistry.SHIELDWALL_ID))
+
+	state.end_turn()
+
+	assert_true(player.has_status(StatusRegistry.SHIELDWALL_ID))
+
+	state.end_turn()
+
+	assert_false(player.has_status(StatusRegistry.SHIELDWALL_ID))
+
+
 func test_bleeding_deals_damage_at_start_of_affected_turn() -> void:
 	var player := _make_unit({"id": "p", "team": "player", "initiative": 40})
 	var enemy := _make_unit(
