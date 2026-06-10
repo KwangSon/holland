@@ -85,6 +85,8 @@ static func get_attack_targets(
 		return []
 	if attacker.fatigue + attack_skill.fatigue_cost > attacker.max_fatigue:
 		return []
+	if attacker.ammo < attack_skill.ammo_cost:
+		return []
 
 	var result: Array[String] = []
 	for unit: CombatUnit in all_units:
@@ -152,6 +154,7 @@ static func roll_attack(
 		"skill_display_name": attack_skill.display_name,
 		"action_point_cost": attack_skill.action_point_cost,
 		"fatigue_cost": attack_skill.fatigue_cost,
+		"ammo_cost": attack_skill.ammo_cost,
 		"body_part": body_part,
 		"raw_damage": raw_damage,
 		"armor_before": damage_result.get("armor_before", 0),
@@ -216,6 +219,7 @@ static func preview_attack(
 		"head_hp_damage": head_damage.get("hp_damage", 0),
 		"action_point_cost": attack_skill.action_point_cost,
 		"fatigue_cost": attack_skill.fatigue_cost,
+		"ammo_cost": attack_skill.ammo_cost,
 	}
 
 
@@ -283,6 +287,7 @@ static func _is_target_in_skill_range(
 	return (
 		board.hex_distance(attacker.position, defender.position)
 		<= _get_effective_attack_range(attacker, defender, board, skill)
+		and _has_line_of_fire(attacker.position, defender.position, board, skill)
 	)
 
 
@@ -309,6 +314,58 @@ static func _get_distance_hit_penalty(
 
 static func _is_ranged_skill(skill) -> bool:
 	return skill != null and "ranged" in skill.tags
+
+
+static func _has_line_of_fire(
+	attacker_cell: Vector2i, defender_cell: Vector2i, board: CombatBoard, skill
+) -> bool:
+	if not _is_ranged_skill(skill):
+		return true
+	for cell: Vector2i in _get_line_between_cells(attacker_cell, defender_cell, board):
+		if board.get_tile_data(cell).is_blocked():
+			return false
+	return true
+
+
+static func _get_line_between_cells(
+	start: Vector2i, end: Vector2i, board: CombatBoard
+) -> Array[Vector2i]:
+	var distance := board.hex_distance(start, end)
+	if distance <= 1:
+		return []
+	var start_cube := _offset_to_cube_float(start)
+	var end_cube := _offset_to_cube_float(end)
+	var result: Array[Vector2i] = []
+	for i: int in range(1, distance):
+		var t := float(i) / float(distance)
+		var cube := start_cube.lerp(end_cube, t)
+		var cell := _cube_round_to_offset(cube)
+		if cell != start and cell != end and board.is_valid(cell) and not cell in result:
+			result.append(cell)
+	return result
+
+
+static func _offset_to_cube_float(cell: Vector2i) -> Vector3:
+	var q := float(cell.x)
+	var r := float(cell.y - (cell.x >> 1))
+	var s := -q - r
+	return Vector3(q, s, r)
+
+
+static func _cube_round_to_offset(cube: Vector3) -> Vector2i:
+	var q := roundi(cube.x)
+	var s := roundi(cube.y)
+	var r := roundi(cube.z)
+	var q_diff: float = abs(float(q) - cube.x)
+	var s_diff: float = abs(float(s) - cube.y)
+	var r_diff: float = abs(float(r) - cube.z)
+	if q_diff > s_diff and q_diff > r_diff:
+		q = -s - r
+	elif s_diff > r_diff:
+		s = -q - r
+	else:
+		r = -q - s
+	return Vector2i(q, r + (q >> 1))
 
 
 static func _get_surround_defense_penalty(

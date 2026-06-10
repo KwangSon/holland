@@ -147,16 +147,8 @@ func attack(
 ) -> Dictionary:
 	var attacker: CombatUnit = _units.get(attacker_id, null)
 	var defender: CombatUnit = _units.get(defender_id, null)
-	if attacker == null or defender == null:
-		return {}
-	if not attacker.alive or not defender.alive or not _is_active_unit_id(attacker_id):
-		return {}
 	var skill: CombatSkillData = CombatSkillRegistry.get_skill(skill_id)
-	if not defender_id in CombatRules.get_attack_targets(attacker, _board, get_all_units(), skill):
-		return {}
-	if attacker.action_points < skill.action_point_cost:
-		return {}
-	if attacker.fatigue + skill.fatigue_cost > attacker.max_fatigue:
+	if not _can_attack(attacker, defender, skill):
 		return {}
 
 	var result := CombatRules.roll_attack(attacker, defender, _rng, _board, skill, get_all_units())
@@ -164,6 +156,7 @@ func attack(
 	result["killed"] = not defender.alive
 	attacker.action_points -= skill.action_point_cost
 	attacker.fatigue += skill.fatigue_cost
+	attacker.ammo -= skill.ammo_cost
 
 	if not defender.alive:
 		_remove_dead_unit(defender_id)
@@ -259,6 +252,20 @@ func end_player_phase() -> void:
 
 func get_outcome() -> String:
 	return CombatRules.check_outcome(get_all_units())
+
+
+func _can_attack(attacker: CombatUnit, defender: CombatUnit, skill: CombatSkillData) -> bool:
+	if attacker == null or defender == null:
+		return false
+	if not attacker.alive or not defender.alive or not _is_active_unit_id(attacker.id):
+		return false
+	if not defender.id in CombatRules.get_attack_targets(attacker, _board, get_all_units(), skill):
+		return false
+	if attacker.action_points < skill.action_point_cost:
+		return false
+	if attacker.fatigue + skill.fatigue_cost > attacker.max_fatigue:
+		return false
+	return attacker.ammo >= skill.ammo_cost
 
 
 func _build_turn_order(units: Array[CombatUnit]) -> void:

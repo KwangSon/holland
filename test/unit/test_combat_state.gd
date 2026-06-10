@@ -67,7 +67,7 @@ func test_fatigue_reduces_current_initiative_order() -> void:
 
 
 func test_move_unit_consumes_path_ap_and_fatigue_without_ending_turn() -> void:
-	var player := _make_unit({"id": "p", "team": "player", "initiative": 40})
+	var player := _make_unit({"id": "p", "team": "player", "initiative": 40, "ammo": 2})
 	var enemy := _make_unit({"id": "e", "team": "enemy", "position": Vector2i(2, 0)})
 	var state := _start_state([player], [enemy], [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)])
 
@@ -116,7 +116,7 @@ func test_attack_consumes_ap_and_fatigue() -> void:
 
 
 func test_attack_with_skill_id_uses_skill_range_and_costs() -> void:
-	var player := _make_unit({"id": "p", "team": "player", "initiative": 40})
+	var player := _make_unit({"id": "p", "team": "player", "initiative": 40, "ammo": 2})
 	var enemy := _make_unit({"id": "e", "team": "enemy", "position": Vector2i(2, 0)})
 	var cells: Array[Vector2i] = [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)]
 	var state := _start_state([player], [enemy], cells)
@@ -128,6 +128,7 @@ func test_attack_with_skill_id_uses_skill_range_and_costs() -> void:
 	assert_eq(result.get("skill_id", ""), CombatSkillRegistry.RANGED_SHOT_ID)
 	assert_eq(player.action_points, 5)
 	assert_eq(player.fatigue, 20)
+	assert_eq(player.ammo, 1)
 
 
 func test_unit_can_attack_multiple_times_while_ap_and_fatigue_allow() -> void:

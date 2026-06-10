@@ -21,6 +21,7 @@ func test_create_assigns_optional_combat_modifiers() -> void:
 				"display_name": "강타",
 				"action_point_cost": 6,
 				"fatigue_cost": 40,
+				"ammo_cost": 2,
 				"range": 1,
 				"hit_modifier": -10,
 				"damage_percent": 125,
@@ -36,6 +37,7 @@ func test_create_assigns_optional_combat_modifiers() -> void:
 	)
 	assert_eq(skill.id, "heavy_swing")
 	assert_eq(skill.hit_modifier, -10)
+	assert_eq(skill.ammo_cost, 2)
 	assert_eq(skill.damage_percent, 125)
 	assert_eq(skill.armor_damage_percent, 150)
 	assert_eq(skill.armor_penetration_modifier, 15)

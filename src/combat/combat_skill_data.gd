@@ -5,6 +5,7 @@ var id: String = ""
 var display_name: String = ""
 var action_point_cost: int = 0
 var fatigue_cost: int = 0
+var ammo_cost: int = 0
 var attack_range: int = 1
 var hit_modifier: int = 0
 var damage_percent: int = 100
@@ -23,6 +24,7 @@ static func create(data: Dictionary):
 	skill.display_name = data.get("display_name", "")
 	skill.action_point_cost = data.get("action_point_cost", 0)
 	skill.fatigue_cost = data.get("fatigue_cost", 0)
+	skill.ammo_cost = data.get("ammo_cost", 0)
 	skill.attack_range = data.get("attack_range", data.get("range", 1))
 	skill.hit_modifier = data.get("hit_modifier", 0)
 	skill.damage_percent = data.get("damage_percent", 100)

@@ -12,6 +12,8 @@ func _make_unit(overrides: Dictionary = {}) -> CombatUnit:
 		"max_fatigue": 100,
 		"melee_skill": 0,
 		"ranged_skill": 60,
+		"ammo": 10,
+		"max_ammo": 10,
 	}
 	defaults.merge(overrides, true)
 	return CombatUnit.create(defaults)
@@ -52,5 +54,44 @@ func test_high_ground_extends_ranged_attack_range() -> void:
 	assert_eq(CombatRules.get_attack_targets(attacker, board, [attacker, defender], skill), [])
 
 	board.set_height(attacker.position, 2)
+
+	assert_eq(CombatRules.get_attack_targets(attacker, board, [attacker, defender], skill), ["d"])
+
+
+func test_ranged_attack_requires_ammo() -> void:
+	var board := _make_line_board(3)
+	var attacker := _make_unit({"id": "a", "position": Vector2i(0, 0), "ammo": 0})
+	var defender := _make_unit({"id": "d", "team": "enemy", "position": Vector2i(2, 0)})
+	var skill: CombatSkillData = CombatSkillRegistry.get_skill(CombatSkillRegistry.RANGED_SHOT_ID)
+
+	assert_eq(CombatRules.get_attack_targets(attacker, board, [attacker, defender], skill), [])
+
+
+func test_ranged_attack_consumes_ammo() -> void:
+	var attacker := _make_unit({"id": "a", "position": Vector2i(0, 0), "ammo": 2})
+	var defender := _make_unit({"id": "d", "team": "enemy", "position": Vector2i(2, 0)})
+	var state := CombatState.new()
+	state.start_encounter([attacker], [defender], [Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)], 1)
+
+	var result := state.attack("a", "d", CombatSkillRegistry.RANGED_SHOT_ID)
+
+	assert_false(result.is_empty())
+	assert_eq(attacker.ammo, 1)
+
+
+func test_blocked_tile_blocks_ranged_line_of_fire() -> void:
+	var tiles := {}
+	for x: int in range(5):
+		tiles[Vector2i(x, 0)] = {"terrain": CombatTileData.TerrainType.PLAIN, "height": 0}
+	tiles[Vector2i(2, 0)] = {"terrain": CombatTileData.TerrainType.BLOCKED, "height": 0}
+	var board := CombatBoard.new()
+	board.setup_tiles(tiles)
+	var attacker := _make_unit({"id": "a", "position": Vector2i(0, 0)})
+	var defender := _make_unit({"id": "d", "team": "enemy", "position": Vector2i(4, 0)})
+	var skill: CombatSkillData = CombatSkillRegistry.get_skill(CombatSkillRegistry.RANGED_SHOT_ID)
+
+	assert_eq(CombatRules.get_attack_targets(attacker, board, [attacker, defender], skill), [])
+
+	board.set_terrain(Vector2i(2, 0), CombatTileData.TerrainType.PLAIN)
 
 	assert_eq(CombatRules.get_attack_targets(attacker, board, [attacker, defender], skill), ["d"])

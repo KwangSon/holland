@@ -88,6 +88,8 @@ static func player_units() -> Array[CombatUnit]:
 					"damage": 11,
 					"armor_penetration": 20,
 					"chance_to_hit_head": 30,
+					"ammo": 12,
+					"max_ammo": 12,
 				}
 			)
 		),
@@ -120,6 +122,8 @@ static func enemy_units() -> Array[CombatUnit]:
 					"damage": 10,
 					"armor_penetration": 20,
 					"chance_to_hit_head": 25,
+					"ammo": 8,
+					"max_ammo": 8,
 					"is_ai": true,
 				}
 			)
@@ -147,6 +151,8 @@ static func enemy_units() -> Array[CombatUnit]:
 					"damage": 12,
 					"armor_penetration": 25,
 					"chance_to_hit_head": 25,
+					"ammo": 6,
+					"max_ammo": 6,
 					"is_ai": true,
 				}
 			)

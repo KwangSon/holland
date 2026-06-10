@@ -29,6 +29,8 @@ var base_damage: int = 0
 var base_armor_penetration: int = 0
 var base_chance_to_hit_head: int = 0
 var base_vision: int = 0
+var base_ammo: int = 0
+var base_max_ammo: int = 0
 
 # === Effective Stats (with equipment) ===
 var head_armor: int = 0
@@ -52,6 +54,8 @@ var damage: int = 0
 var armor_penetration: int = 0
 var chance_to_hit_head: int = 0
 var vision: int = 0
+var ammo: int = 0
+var max_ammo: int = 0
 
 # === Progression ===
 var level: int = 1
@@ -107,6 +111,8 @@ static func create(data: Dictionary) -> CombatUnit:
 	u.base_armor_penetration = data.get("armor_penetration", 0)
 	u.base_chance_to_hit_head = data.get("chance_to_hit_head", 0)
 	u.base_vision = data.get("vision", 0)
+	u.base_max_ammo = data.get("max_ammo", data.get("ammo", 0))
+	u.base_ammo = data.get("ammo", u.base_max_ammo)
 
 	# Progression
 	u.level = data.get("level", 1)
@@ -140,6 +146,8 @@ func recalculate_stats() -> void:
 	armor_penetration = base_armor_penetration
 	chance_to_hit_head = base_chance_to_hit_head
 	vision = base_vision
+	max_ammo = base_max_ammo
+	ammo = base_ammo
 
 	# Apply equipment bonuses
 	_apply_item_bonus(weapon)

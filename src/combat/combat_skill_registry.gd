@@ -85,6 +85,7 @@ static func _get_definitions() -> Dictionary:
 			"display_name": "원거리 사격",
 			"action_point_cost": 4,
 			"fatigue_cost": 20,
+			"ammo_cost": 1,
 			"attack_range": 6,
 			"hit_modifier": -5,
 			"distance_penalty_per_tile": 5,

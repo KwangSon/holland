@@ -598,31 +598,7 @@ func _log_attack(result: Dictionary, defender_id: String) -> void:
 		return
 	var defender := _find_unit(defender_id)
 	var name_str := defender.display_name if defender != null else defender_id
-	var skill_name: String = result.get("skill_display_name", result.get("skill_id", "공격"))
-	if result.get("hit", false):
-		var part := "머리" if result.get("body_part", "body") == "head" else "몸"
-		var msg := (
-			"%s → %s %s  명중 %d%%  굴림 %d  갑옷 %d→%d  HP -%d"
-			% [
-				skill_name,
-				name_str,
-				part,
-				result.get("hit_chance", 0),
-				result.get("roll", 0),
-				result.get("armor_before", 0),
-				result.get("armor_after", 0),
-				result.get("hp_damage", 0),
-			]
-		)
-		if result.get("killed", false):
-			msg += "  [사망]"
-		_append_log(msg)
-	else:
-		var msg := (
-			"%s → %s  명중 %d%%  굴림 %d  빗나감"
-			% [skill_name, name_str, result.get("hit_chance", 0), result.get("roll", 0)]
-		)
-		_append_log(msg)
+	_append_log(CombatUi.format_attack_log(result, name_str))
 
 
 func _log_move_result(unit: CombatUnit) -> void:
@@ -902,18 +878,7 @@ func _refresh_attack_preview(cell: Vector2i) -> void:
 
 	var skill: CombatSkillData = CombatSkillRegistry.get_skill(_selected_skill_id)
 	var preview := CombatRules.preview_attack(active, defender, board, skill, _state.get_all_units())
-	_move_preview_label.text = (
-		"공격 예측  명중 %d%%  몸 갑 %d HP %d  머리 갑 %d HP %d  AP %d  피로도 +%d"
-		% [
-			preview["hit_chance"],
-			preview["body_armor_damage"],
-			preview["body_hp_damage"],
-			preview["head_armor_damage"],
-			preview["head_hp_damage"],
-			preview["action_point_cost"],
-			preview["fatigue_cost"],
-		]
-	)
+	_move_preview_label.text = CombatUi.format_attack_preview(preview)
 
 
 func _refresh_move_preview() -> void:
@@ -948,16 +913,7 @@ func _show_skill_summary(active: CombatUnit) -> void:
 	var target_count := 0 if not movement_skill_id.is_empty() else _state.get_attack_targets(
 		active.id, _selected_skill_id
 	).size()
-	_move_preview_label.text = (
-		"%s  사거리 %d  대상 %d  AP %d  피로도 +%d"
-		% [
-			skill.display_name,
-			skill.attack_range,
-			target_count,
-			skill.action_point_cost,
-			skill.fatigue_cost,
-		]
-	)
+	_move_preview_label.text = CombatUi.format_skill_summary(skill, target_count)
 
 
 func _get_selected_movement_skill_id() -> String:
