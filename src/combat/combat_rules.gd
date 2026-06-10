@@ -2,6 +2,9 @@ class_name CombatRules
 
 const CombatSkillDataScript := preload("res://src/combat/combat_skill_data.gd")
 const CombatSkillRegistryScript := preload("res://src/combat/combat_skill_registry.gd")
+const CombatStatusEffectRegistryScript := preload(
+	"res://src/combat/combat_status_effect_registry.gd"
+)
 
 const TURN_FATIGUE_RECOVERY: int = 15
 const MIN_HIT_CHANCE: int = 5
@@ -18,6 +21,8 @@ static func get_legal_moves(
 ) -> Array[Vector2i]:
 	var skill = _skill_or_null(movement_skill)
 	if not unit.alive or unit.action_points <= 0:
+		return []
+	if CombatStatusEffectRegistryScript.blocks_movement(unit.get_status_ids()):
 		return []
 	if unit.fatigue >= unit.max_fatigue:
 		return []
@@ -80,6 +85,8 @@ static func get_attack_targets(
 ) -> Array[String]:
 	var attack_skill = _skill_or_basic(skill)
 	if not attacker.alive:
+		return []
+	if CombatStatusEffectRegistryScript.blocks_actions(attacker.get_status_ids()):
 		return []
 	if attacker.action_points < attack_skill.action_point_cost:
 		return []
@@ -175,6 +182,10 @@ static func calculate_hit_chance(
 	var attack_skill = _skill_or_basic(skill)
 	var is_ranged := _is_ranged_skill(attack_skill)
 	var defense: int = defender.ranged_defense if is_ranged else defender.melee_defense
+	if is_ranged:
+		defense += CombatStatusEffectRegistryScript.get_ranged_defense_bonus(defender.get_status_ids())
+	else:
+		defense += CombatStatusEffectRegistryScript.get_melee_defense_bonus(defender.get_status_ids())
 	if defense > 50:
 		@warning_ignore("integer_division")
 		defense = 50 + ((defense - 50) / 2)

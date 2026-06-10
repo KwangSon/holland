@@ -72,6 +72,7 @@ var position: Vector2i = Vector2i.ZERO
 var visual_position: Vector2 = Vector2.ZERO
 var alive: bool = true
 var has_acted: bool = false
+var status_turns: Dictionary = {}
 
 
 static func create(data: Dictionary) -> CombatUnit:
@@ -212,6 +213,33 @@ func unequip_item(slot: String) -> void:
 
 func has_trait(trait_id: String) -> bool:
 	return trait_id in trait_ids
+
+
+func apply_status(status_id: String, duration_turns: int) -> void:
+	status_turns[status_id] = maxi(duration_turns, status_turns.get(status_id, 0))
+
+
+func remove_status(status_id: String) -> void:
+	status_turns.erase(status_id)
+
+
+func has_status(status_id: String) -> bool:
+	return status_turns.get(status_id, 0) > 0
+
+
+func get_status_ids() -> Array[String]:
+	var result: Array[String] = []
+	for status_id: String in status_turns.keys():
+		if status_turns[status_id] > 0:
+			result.append(status_id)
+	return result
+
+
+func tick_statuses() -> void:
+	for status_id: String in status_turns.keys():
+		status_turns[status_id] -= 1
+		if status_turns[status_id] <= 0:
+			status_turns.erase(status_id)
 
 
 func get_current_initiative() -> int:

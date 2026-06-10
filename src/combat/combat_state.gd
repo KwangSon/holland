@@ -1,5 +1,9 @@
 class_name CombatState
 
+const CombatStatusEffectRegistryScript := preload(
+	"res://src/combat/combat_status_effect_registry.gd"
+)
+
 var round_number: int = 1
 
 var _board: CombatBoard
@@ -76,6 +80,16 @@ func get_board() -> CombatBoard:
 
 func get_last_move_result() -> Dictionary:
 	return _last_move_result
+
+
+func apply_status(unit_id: String, status_id: String, duration_turns: int = 0) -> bool:
+	var unit: CombatUnit = _units.get(unit_id, null)
+	if unit == null or not unit.alive:
+		return false
+	var status = CombatStatusEffectRegistryScript.get_status(status_id)
+	var duration: int = duration_turns if duration_turns > 0 else status.duration_turns
+	unit.apply_status(status_id, duration)
+	return true
 
 
 func get_legal_moves(unit_id: String, movement_skill_id: String = "") -> Array[Vector2i]:
@@ -168,6 +182,8 @@ func recover(unit_id: String) -> bool:
 	var unit: CombatUnit = _units.get(unit_id, null)
 	if unit == null or not unit.alive or not _is_active_unit_id(unit_id):
 		return false
+	if CombatStatusEffectRegistryScript.blocks_actions(unit.get_status_ids()):
+		return false
 	var skill = CombatSkillRegistry.get_skill(CombatSkillRegistry.RECOVER_ID)
 	if unit.action_points < skill.action_point_cost:
 		return false
@@ -179,6 +195,7 @@ func recover(unit_id: String) -> bool:
 func end_turn() -> void:
 	if _turn_order.is_empty():
 		return
+	_finish_active_turn()
 	if _turn_index + 1 >= _turn_order.size():
 		round_number += 1
 		_build_turn_order(_get_living_units())
@@ -306,7 +323,24 @@ func _start_unit_turn(unit: CombatUnit, fatigue_recovery: int) -> void:
 	if _turn_started_round.get(unit.id, 0) == round_number:
 		return
 	unit.begin_turn(fatigue_recovery)
+	_apply_start_turn_status_effects(unit)
 	_turn_started_round[unit.id] = round_number
+
+
+func _finish_active_turn() -> void:
+	var active := get_active_unit()
+	if active != null and active.alive:
+		active.tick_statuses()
+
+
+func _apply_start_turn_status_effects(unit: CombatUnit) -> void:
+	var damage: int = CombatStatusEffectRegistryScript.get_start_turn_damage(unit.get_status_ids())
+	if damage <= 0:
+		return
+	unit.hp = maxi(0, unit.hp - damage)
+	if unit.hp <= 0:
+		unit.alive = false
+		_remove_dead_unit(unit.id)
 
 
 func _get_optional_skill(skill_id: String):
