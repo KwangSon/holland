@@ -347,7 +347,8 @@ func _on_mouse_move() -> void:
 		_refresh_overlays()
 		return
 
-	var legal_moves := _state.get_legal_moves(active.id)
+	var movement_skill_id := _get_selected_movement_skill_id()
+	var legal_moves := _state.get_legal_moves(active.id, movement_skill_id)
 	if cell in legal_moves:
 		if cell != _hovered_cell:
 			_hovered_cell = cell
@@ -402,7 +403,8 @@ func _handle_cell_click(cell: Vector2i) -> void:
 				return
 
 			# Move?
-			if cell in _state.get_legal_moves(active.id):
+			var movement_skill_id := _get_selected_movement_skill_id()
+			if cell in _state.get_legal_moves(active.id, movement_skill_id):
 				# Use hover path if available, otherwise find new path
 				var move_path: Array[Vector2i] = (
 					_hover_path
@@ -412,7 +414,7 @@ func _handle_cell_click(cell: Vector2i) -> void:
 				if move_path.size() > 1:
 					_move_unit_along_path(active, move_path)
 				else:
-					_state.move_unit(active.id, cell)
+					_state.move_unit(active.id, cell, movement_skill_id)
 					_log_move_result(active)
 				_deselect()
 				return
@@ -456,7 +458,7 @@ func _on_highlight_draw() -> void:
 				_draw_hex(_highlight_layer, unit.position, Color(1.0, 0.2, 0.2, 0.8))
 		return
 
-	for cell: Vector2i in _state.get_legal_moves(_selected_id):
+	for cell: Vector2i in _state.get_legal_moves(_selected_id, _get_selected_movement_skill_id()):
 		_draw_hex(_highlight_layer, cell, Color(0.2, 0.5, 1.0, 0.35))
 
 	for uid: String in _state.get_attack_targets(_selected_id, _selected_skill_id):
@@ -577,31 +579,16 @@ func _refresh_ui() -> void:
 	_wait_turn_btn.disabled = not is_player_turn or team_queue.size() <= 1
 	_recover_btn.disabled = not is_player_turn or active.action_points < recover_cost
 	_end_turn_btn.disabled = not is_player_turn
-	_attack_btn.disabled = not is_player_turn
-	CombatUi.sync_skill_buttons(_skill_buttons, _selected_skill_id, is_player_turn)
+	_attack_btn.disabled = not is_player_turn or not _get_selected_movement_skill_id().is_empty()
+	CombatUi.sync_skill_buttons(_skill_buttons, _selected_skill_id, is_player_turn, active)
 
 	if active.is_ai:
 		_unit_name_label.text = active.display_name + " (AI 차례)"
-		_unit_stats_label.text = ""
+		_unit_stats_label.text = CombatUi.format_unit_stats(active)
 		_move_preview_label.text = ""
 		return
 	_unit_name_label.text = active.display_name
-	_unit_stats_label.text = (
-		"HP %d/%d  머리갑 %d/%d  몸갑 %d/%d  AP %d/%d  피로도 %d/%d  공격력 %d"
-		% [
-			active.hp,
-			active.max_hp,
-			active.head_armor,
-			active.max_head_armor,
-			active.body_armor,
-			active.max_body_armor,
-			active.action_points,
-			active.max_action_points,
-			active.fatigue,
-			active.max_fatigue,
-			active.damage,
-		]
-	)
+	_unit_stats_label.text = CombatUi.format_unit_stats(active)
 	_refresh_move_preview()
 
 
@@ -947,12 +934,20 @@ func _refresh_move_preview() -> void:
 	var board := _state.get_board()
 	var ap_cost := CombatRules.get_path_ap_cost(_hover_path, active, board)
 	var fatigue_cost := CombatRules.get_path_fatigue_cost(_hover_path, active, board)
+	var movement_skill_id := _get_selected_movement_skill_id()
+	if not movement_skill_id.is_empty():
+		var skill: CombatSkillData = CombatSkillRegistry.get_skill(movement_skill_id)
+		ap_cost += skill.action_point_cost
+		fatigue_cost += skill.fatigue_cost
 	_move_preview_label.text = "이동 비용  AP %d  피로도 +%d" % [ap_cost, fatigue_cost]
 
 
 func _show_skill_summary(active: CombatUnit) -> void:
 	var skill: CombatSkillData = CombatSkillRegistry.get_skill(_selected_skill_id)
-	var target_count := _state.get_attack_targets(active.id, _selected_skill_id).size()
+	var movement_skill_id := _get_selected_movement_skill_id()
+	var target_count := 0 if not movement_skill_id.is_empty() else _state.get_attack_targets(
+		active.id, _selected_skill_id
+	).size()
 	_move_preview_label.text = (
 		"%s  사거리 %d  대상 %d  AP %d  피로도 +%d"
 		% [
@@ -964,9 +959,14 @@ func _show_skill_summary(active: CombatUnit) -> void:
 		]
 	)
 
+
+func _get_selected_movement_skill_id() -> String:
+	var skill: CombatSkillData = CombatSkillRegistry.get_skill(_selected_skill_id)
+	return _selected_skill_id if "movement" in skill.tags else ""
+
 func _move_unit_along_path(unit: CombatUnit, path: Array[Vector2i]) -> void:
 	if path.size() < 2:
-		_state.move_unit(unit.id, path[0])
+		_state.move_unit(unit.id, path[0], _get_selected_movement_skill_id())
 		_log_move_result(unit)
 		_refresh_overlays()
 		_refresh_ui()
@@ -974,7 +974,7 @@ func _move_unit_along_path(unit: CombatUnit, path: Array[Vector2i]) -> void:
 
 	var dest := path[-1]
 	var dest_pos := _cell_to_local(dest)
-	var moved := _state.move_unit(unit.id, dest)
+	var moved := _state.move_unit(unit.id, dest, _get_selected_movement_skill_id())
 	_log_move_result(unit)
 	if not moved:
 		unit.visual_position = _cell_to_local(unit.position)

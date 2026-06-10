@@ -4,8 +4,6 @@
 
 extends Node2D
 
-@onready var samurai: Node2D = $Samurai
-
 ## 적 배치 오프셋 (상, 우, 하)
 const ENEMY_OFFSETS: Array[Vector2] = [
 	Vector2(200, -300),   # 상
@@ -38,6 +36,8 @@ var _samurai_origin: Vector2 = Vector2.ZERO
 var _is_head_falling: bool = false
 var _head_node: Sprite2D = null
 var _head_velocity_y: float = 0.0
+
+@onready var samurai: Node2D = $Samurai
 
 
 func _ready() -> void:

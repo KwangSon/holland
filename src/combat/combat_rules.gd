@@ -13,15 +13,31 @@ const HEAD_HP_DAMAGE_PERCENT: int = 150
 
 
 ## Returns passable cells the unit can move to this turn.
-static func get_legal_moves(unit: CombatUnit, board: CombatBoard) -> Array[Vector2i]:
+static func get_legal_moves(
+	unit: CombatUnit, board: CombatBoard, movement_skill = null
+) -> Array[Vector2i]:
+	var skill = _skill_or_null(movement_skill)
 	if not unit.alive or unit.action_points <= 0:
 		return []
 	if unit.fatigue >= unit.max_fatigue:
 		return []
-	return get_reachable_by_ap(unit, board)
+	if skill != null and (
+		unit.action_points < skill.action_point_cost
+		or unit.fatigue + skill.fatigue_cost > unit.max_fatigue
+	):
+		return []
+	return get_reachable_by_ap(unit, board, skill)
 
 
-static func get_reachable_by_ap(unit: CombatUnit, board: CombatBoard) -> Array[Vector2i]:
+static func get_reachable_by_ap(
+	unit: CombatUnit, board: CombatBoard, movement_skill = null
+) -> Array[Vector2i]:
+	var skill = _skill_or_null(movement_skill)
+	var action_point_budget := unit.action_points
+	var fatigue_budget := unit.max_fatigue - unit.fatigue
+	if skill != null:
+		action_point_budget -= skill.action_point_cost
+		fatigue_budget -= skill.fatigue_cost
 	var best_cost: Dictionary = {}
 	var best_fatigue_cost: Dictionary = {}
 	best_cost[unit.position] = 0
@@ -39,10 +55,7 @@ static func get_reachable_by_ap(unit: CombatUnit, board: CombatBoard) -> Array[V
 			var next_fatigue_cost: int = (
 				best_fatigue_cost[current] + board.get_step_fatigue_cost(current, neighbor, unit)
 			)
-			if (
-				next_ap_cost > unit.action_points
-				or unit.fatigue + next_fatigue_cost > unit.max_fatigue
-			):
+			if next_ap_cost > action_point_budget or next_fatigue_cost > fatigue_budget:
 				continue
 			if (
 				best_cost.has(neighbor)
@@ -103,6 +116,11 @@ static func get_hostile_zoc_controllers(
 		if cell in get_zoc_cells(other, board):
 			result.append(other)
 	return result
+
+
+static func skill_ignores_zoc(skill) -> bool:
+	var resolved_skill = _skill_or_null(skill)
+	return resolved_skill != null and "zoc_ignore" in resolved_skill.tags
 
 
 ## Rolls an attack and returns a stable combat action result dictionary.
@@ -245,6 +263,10 @@ static func get_basic_attack_skill():
 
 static func _skill_or_basic(skill):
 	return skill if skill != null else get_basic_attack_skill()
+
+
+static func _skill_or_null(skill):
+	return skill if skill != null else null
 
 
 static func _is_target_in_skill_range(

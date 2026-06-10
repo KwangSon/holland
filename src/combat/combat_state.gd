@@ -78,11 +78,11 @@ func get_last_move_result() -> Dictionary:
 	return _last_move_result
 
 
-func get_legal_moves(unit_id: String) -> Array[Vector2i]:
+func get_legal_moves(unit_id: String, movement_skill_id: String = "") -> Array[Vector2i]:
 	var unit: CombatUnit = _units.get(unit_id, null)
 	if unit == null or not _is_active_unit_id(unit_id):
 		return []
-	return CombatRules.get_legal_moves(unit, _board)
+	return CombatRules.get_legal_moves(unit, _board, _get_optional_skill(movement_skill_id))
 
 
 func get_attack_targets(
@@ -95,22 +95,36 @@ func get_attack_targets(
 	return CombatRules.get_attack_targets(unit, _board, get_all_units(), skill)
 
 
-func move_unit(unit_id: String, target: Vector2i) -> bool:
-	_last_move_result = {"moved": false, "zoc_attacks": [], "blocked_by_zoc": false}
+func move_unit(unit_id: String, target: Vector2i, movement_skill_id: String = "") -> bool:
+	var movement_skill = _get_optional_skill(movement_skill_id)
+	var ignores_zoc := CombatRules.skill_ignores_zoc(movement_skill)
+	_last_move_result = {
+		"moved": false,
+		"zoc_attacks": [],
+		"blocked_by_zoc": false,
+		"ignored_zoc": ignores_zoc,
+		"movement_skill_id": movement_skill_id,
+	}
 	var unit: CombatUnit = _units.get(unit_id, null)
 	if unit == null or not unit.alive or not _is_active_unit_id(unit_id):
 		return false
-	if not target in CombatRules.get_legal_moves(unit, _board):
+	if not target in CombatRules.get_legal_moves(unit, _board, movement_skill):
 		return false
 	var path := _board.find_path(unit.position, target)
 	if path.size() < 2:
 		return false
-	var zoc_result := _resolve_zoc_escape_attacks(unit, path)
+	var zoc_result := _create_move_result(movement_skill_id, ignores_zoc)
+	if not ignores_zoc:
+		zoc_result = _resolve_zoc_escape_attacks(unit, path)
+		zoc_result["movement_skill_id"] = movement_skill_id
 	if zoc_result.get("blocked_by_zoc", false):
 		_last_move_result = zoc_result
 		return false
 	var ap_cost := CombatRules.get_path_ap_cost(path, unit, _board)
 	var fatigue_cost := CombatRules.get_path_fatigue_cost(path, unit, _board)
+	if movement_skill != null:
+		ap_cost += movement_skill.action_point_cost
+		fatigue_cost += movement_skill.fatigue_cost
 	if ap_cost > unit.action_points or unit.fatigue + fatigue_cost > unit.max_fatigue:
 		return false
 	_board.clear_occupied(unit.position)
@@ -120,6 +134,8 @@ func move_unit(unit_id: String, target: Vector2i) -> bool:
 	unit.fatigue += fatigue_cost
 	_last_move_result = zoc_result
 	_last_move_result["moved"] = true
+	_last_move_result["ap_cost"] = ap_cost
+	_last_move_result["fatigue_cost"] = fatigue_cost
 	return true
 
 
@@ -291,8 +307,24 @@ func _start_unit_turn(unit: CombatUnit, fatigue_recovery: int) -> void:
 	_turn_started_round[unit.id] = round_number
 
 
+func _get_optional_skill(skill_id: String):
+	if skill_id.is_empty():
+		return null
+	return CombatSkillRegistry.get_skill(skill_id)
+
+
+func _create_move_result(movement_skill_id: String, ignored_zoc: bool) -> Dictionary:
+	return {
+		"moved": false,
+		"zoc_attacks": [],
+		"blocked_by_zoc": false,
+		"ignored_zoc": ignored_zoc,
+		"movement_skill_id": movement_skill_id,
+	}
+
+
 func _resolve_zoc_escape_attacks(unit: CombatUnit, path: Array[Vector2i]) -> Dictionary:
-	var result := {"moved": false, "zoc_attacks": [], "blocked_by_zoc": false}
+	var result := _create_move_result("", false)
 	var all_units := get_all_units()
 	for i: int in range(1, path.size()):
 		var step_from := path[i - 1]
