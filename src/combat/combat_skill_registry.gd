@@ -87,6 +87,7 @@ static func _get_definitions() -> Dictionary:
 			"fatigue_cost": 20,
 			"attack_range": 6,
 			"hit_modifier": -5,
+			"distance_penalty_per_tile": 5,
 			"damage_percent": 90,
 			"armor_damage_percent": 70,
 			"tags": ["ranged", "bow"],

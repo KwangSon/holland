@@ -170,12 +170,17 @@ static func calculate_hit_chance(
 	all_units: Array[CombatUnit] = []
 ) -> int:
 	var attack_skill = _skill_or_basic(skill)
-	var defense: int = defender.melee_defense
+	var is_ranged := _is_ranged_skill(attack_skill)
+	var defense: int = defender.ranged_defense if is_ranged else defender.melee_defense
 	if defense > 50:
 		@warning_ignore("integer_division")
 		defense = 50 + ((defense - 50) / 2)
-	defense = maxi(0, defense - _get_surround_defense_penalty(attacker, defender, board, all_units))
-	var chance: int = attacker.melee_skill - defense + attack_skill.hit_modifier
+	if not is_ranged:
+		defense = maxi(
+			0, defense - _get_surround_defense_penalty(attacker, defender, board, all_units)
+		)
+	var attack_stat: int = attacker.ranged_skill if is_ranged else attacker.melee_skill
+	var chance: int = attack_stat - defense + attack_skill.hit_modifier
 	if board != null:
 		var height_delta := (
 			board.get_height(attacker.position) - board.get_height(defender.position)
@@ -184,6 +189,7 @@ static func calculate_hit_chance(
 			chance += 10
 		elif height_delta < 0:
 			chance -= 10 * abs(height_delta)
+		chance -= _get_distance_hit_penalty(attacker, defender, board, attack_skill)
 	return clampi(chance, MIN_HIT_CHANCE, MAX_HIT_CHANCE)
 
 
@@ -274,7 +280,35 @@ static func _is_target_in_skill_range(
 ) -> bool:
 	if skill.attack_range <= 1:
 		return board.is_melee_reachable(attacker.position, defender.position)
-	return board.hex_distance(attacker.position, defender.position) <= skill.attack_range
+	return (
+		board.hex_distance(attacker.position, defender.position)
+		<= _get_effective_attack_range(attacker, defender, board, skill)
+	)
+
+
+static func _get_effective_attack_range(
+	attacker: CombatUnit, defender: CombatUnit, board: CombatBoard, skill
+) -> int:
+	var attack_range: int = skill.attack_range
+	if _is_ranged_skill(skill) and board.get_height(attacker.position) > board.get_height(
+		defender.position
+	):
+		attack_range += board.get_height(attacker.position) - board.get_height(defender.position)
+	return attack_range
+
+
+static func _get_distance_hit_penalty(
+	attacker: CombatUnit, defender: CombatUnit, board: CombatBoard, skill
+) -> int:
+	if not _is_ranged_skill(skill):
+		return 0
+	var distance := board.hex_distance(attacker.position, defender.position)
+	var penalized_tiles: int = distance - 1 if skill.ignore_first_tile_for_distance else distance
+	return maxi(0, penalized_tiles) * skill.distance_penalty_per_tile
+
+
+static func _is_ranged_skill(skill) -> bool:
+	return skill != null and "ranged" in skill.tags
 
 
 static func _get_surround_defense_penalty(

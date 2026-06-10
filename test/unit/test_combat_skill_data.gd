@@ -28,6 +28,8 @@ func test_create_assigns_optional_combat_modifiers() -> void:
 				"armor_penetration_modifier": 15,
 				"head_hit_modifier": 5,
 				"fatigue_recovery": 20,
+				"distance_penalty_per_tile": 6,
+				"ignore_first_tile_for_distance": false,
 				"tags": ["melee", "heavy"],
 			}
 		)
@@ -39,4 +41,6 @@ func test_create_assigns_optional_combat_modifiers() -> void:
 	assert_eq(skill.armor_penetration_modifier, 15)
 	assert_eq(skill.head_hit_modifier, 5)
 	assert_eq(skill.fatigue_recovery, 20)
+	assert_eq(skill.distance_penalty_per_tile, 6)
+	assert_false(skill.ignore_first_tile_for_distance)
 	assert_true("heavy" in skill.tags)

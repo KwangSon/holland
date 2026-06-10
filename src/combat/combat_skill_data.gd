@@ -12,6 +12,8 @@ var armor_damage_percent: int = 100
 var armor_penetration_modifier: int = 0
 var head_hit_modifier: int = 0
 var fatigue_recovery: int = 0
+var distance_penalty_per_tile: int = 0
+var ignore_first_tile_for_distance: bool = true
 var tags: Array[String] = []
 
 
@@ -28,6 +30,8 @@ static func create(data: Dictionary):
 	skill.armor_penetration_modifier = data.get("armor_penetration_modifier", 0)
 	skill.head_hit_modifier = data.get("head_hit_modifier", 0)
 	skill.fatigue_recovery = data.get("fatigue_recovery", 0)
+	skill.distance_penalty_per_tile = data.get("distance_penalty_per_tile", 0)
+	skill.ignore_first_tile_for_distance = data.get("ignore_first_tile_for_distance", true)
 	skill.tags.assign(data.get("tags", []))
 	return skill
 

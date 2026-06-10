@@ -42,6 +42,7 @@ func test_weapon_family_skills_have_distinct_combat_profiles() -> void:
 	assert_eq(mace.armor_damage_percent, 120)
 	assert_true("ranged" in ranged.tags)
 	assert_eq(ranged.attack_range, 6)
+	assert_eq(ranged.distance_penalty_per_tile, 5)
 
 
 func test_utility_skills_define_costs_and_tags() -> void:
