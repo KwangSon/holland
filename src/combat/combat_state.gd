@@ -216,7 +216,7 @@ func get_remaining_turn_queue() -> Array[CombatUnit]:
 	return result
 
 
-## Defers the active player unit to the end of the remaining player queue.
+## Defers the active player unit to the end of the current round queue.
 func wait_turn() -> void:
 	if _turn_order.is_empty():
 		return
@@ -224,16 +224,11 @@ func wait_turn() -> void:
 	if active == null or active.team != "player":
 		return
 	var current_id := _turn_order[_turn_index]
-	var last_player_pos := _turn_index
-	for i: int in range(_turn_index + 1, _turn_order.size()):
-		var u: CombatUnit = _units.get(_turn_order[i], null)
-		if u != null and u.team == "player":
-			last_player_pos = i
-	if last_player_pos == _turn_index:
+	if _turn_index >= _turn_order.size() - 1:
 		end_turn()
 		return
 	_turn_order.remove_at(_turn_index)
-	_turn_order.insert(last_player_pos, current_id)
+	_turn_order.append(current_id)
 	var next := get_active_unit()
 	if next != null:
 		_start_unit_turn(next, CombatRules.TURN_FATIGUE_RECOVERY)

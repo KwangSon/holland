@@ -234,7 +234,7 @@ func test_end_turn_starts_next_unit_with_ap_reset_and_fatigue_recovery() -> void
 	assert_eq(enemy.fatigue, 5)
 
 
-func test_wait_turn_does_not_reset_waiting_unit_when_it_returns_same_round() -> void:
+func test_wait_turn_defers_unit_to_end_of_current_round_without_reset() -> void:
 	var first := _make_unit({"id": "p1", "team": "player", "initiative": 50, "action_points": 3})
 	var second := _make_unit(
 		{"id": "p2", "team": "player", "position": Vector2i(1, 0), "initiative": 40}
@@ -249,6 +249,9 @@ func test_wait_turn_does_not_reset_waiting_unit_when_it_returns_same_round() -> 
 
 	state.wait_turn()
 	assert_eq(state.get_active_unit().id, "p2")
+
+	state.end_turn()
+	assert_eq(state.get_active_unit().id, "e")
 
 	state.end_turn()
 	assert_eq(state.get_active_unit().id, "p1")
