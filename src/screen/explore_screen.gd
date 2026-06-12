@@ -228,6 +228,7 @@ func _enter_combat(zone: VillageZone) -> void:
 				"max_hp": 60,
 				"max_fatigue": 120,
 				"damage": 15,
+				"skill_ids": [CombatSkillRegistry.BASIC_ATTACK_ID, CombatSkillRegistry.SHIELDWALL_ID],
 			},
 			{
 				"id": "p2",
@@ -311,6 +312,10 @@ func _get_party_from_rna() -> Array[CombatUnit]:
 				"max_hp": 30,
 				"max_fatigue": 80,
 				"damage": 12,
+				"ammo": 8,
+				"max_ammo": 8,
+				"ranged_skill": 55,
+				"skill_ids": [CombatSkillRegistry.RANGED_SHOT_ID, CombatSkillRegistry.BASIC_ATTACK_ID],
 			},
 		]
 
