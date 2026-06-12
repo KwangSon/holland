@@ -5,6 +5,7 @@ const CombatSkillRegistryScript := preload("res://src/combat/combat_skill_regist
 const CombatStatusEffectRegistryScript := preload(
 	"res://src/combat/combat_status_effect_registry.gd"
 )
+const InjuryRegistryScript := preload("res://src/combat/injury_registry.gd")
 
 const TURN_FATIGUE_RECOVERY: int = 15
 const MIN_HIT_CHANCE: int = 5
@@ -18,6 +19,7 @@ const MAX_MORALE_CHANCE: int = 95
 const LARGE_DAMAGE_MORALE_HP_PERCENT: int = 25
 const LARGE_DAMAGE_MORALE_PENALTY: int = 20
 const ALLY_DEATH_MORALE_PENALTY: int = 30
+const INJURY_HP_DAMAGE_PERCENT: int = 30
 
 
 ## Returns passable cells the unit can move to this turn.
@@ -176,6 +178,7 @@ static func roll_attack(
 		"armor_after": damage_result.get("armor_after", 0),
 		"hp_damage": damage_result.get("hp_damage", 0),
 		"killed": false,
+		"injury": {},
 		"morale_checks": [],
 	}
 
@@ -286,6 +289,18 @@ static func should_check_large_damage_morale(unit: CombatUnit, hp_damage: int) -
 	if hp_damage <= 0 or not unit.alive:
 		return false
 	return hp_damage * 100 >= unit.max_hp * LARGE_DAMAGE_MORALE_HP_PERCENT
+
+
+static func should_apply_temporary_injury(unit: CombatUnit, hp_damage: int) -> bool:
+	if hp_damage <= 0 or not unit.alive:
+		return false
+	return hp_damage * 100 >= unit.max_hp * INJURY_HP_DAMAGE_PERCENT
+
+
+static func get_injury_id_for_body_part(body_part: String) -> String:
+	if body_part == "head":
+		return InjuryRegistryScript.CONCUSSION_ID
+	return InjuryRegistryScript.DEEP_WOUND_ID
 
 
 static func roll_morale_check(

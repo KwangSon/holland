@@ -42,6 +42,7 @@ func test_format_unit_stats_includes_core_combat_resources() -> void:
 	assert_string_contains(text, "피로도 17/80")
 	assert_string_contains(text, "사기 wavering(95)")
 	assert_string_contains(text, "상태 없음")
+	assert_string_contains(text, "부상 없음")
 
 
 func test_format_unit_stats_lists_status_effects_with_remaining_turns() -> void:
@@ -53,6 +54,15 @@ func test_format_unit_stats_lists_status_effects_with_remaining_turns() -> void:
 
 	assert_string_contains(text, "상태 출혈 3턴")
 	assert_string_contains(text, "방패벽 1턴")
+
+
+func test_format_unit_stats_lists_injuries() -> void:
+	var unit := _make_unit()
+	unit.apply_injury(InjuryRegistry.DEEP_WOUND_ID)
+
+	var text := CombatUi.format_unit_stats(unit)
+
+	assert_string_contains(text, "부상 깊은 상처")
 
 
 func test_format_attack_log_includes_hit_roll_body_armor_hp_and_death() -> void:
@@ -77,6 +87,25 @@ func test_format_attack_log_includes_hit_roll_body_armor_hp_and_death() -> void:
 	assert_string_contains(text, "갑옷 12→3")
 	assert_string_contains(text, "HP -7")
 	assert_string_contains(text, "[사망]")
+
+
+func test_format_attack_log_includes_injury_when_present() -> void:
+	var text := CombatUi.format_attack_log(
+		{
+			"skill_display_name": "기본 공격",
+			"hit": true,
+			"hit_chance": 70,
+			"roll": 30,
+			"body_part": "body",
+			"armor_before": 0,
+			"armor_after": 0,
+			"hp_damage": 12,
+			"injury": {"display_name": "깊은 상처"},
+		},
+		"산적"
+	)
+
+	assert_string_contains(text, "부상 깊은 상처")
 
 
 func test_format_attack_log_includes_miss_roll_and_ammo_cost() -> void:

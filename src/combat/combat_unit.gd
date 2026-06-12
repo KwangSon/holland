@@ -4,6 +4,8 @@ enum UnitType { NONE, PRIEST, ANATOMIST, BOWYER, GOBLIN_AMBUSHER, NECROMANCER }
 
 enum MoraleState { FLEEING, BREAKING, WAVERING, STEADY, CONFIDENT }
 
+const InjuryRegistryScript := preload("res://src/combat/injury_registry.gd")
+
 # === Equipment Slots ===
 var weapon = null
 var head_armor_item = null
@@ -77,6 +79,7 @@ var alive: bool = true
 var escaped: bool = false
 var has_acted: bool = false
 var status_turns: Dictionary = {}
+var injury_ids: Array[String] = []
 var morale_state: MoraleState = MoraleState.STEADY
 
 
@@ -98,6 +101,7 @@ static func create(data: Dictionary) -> CombatUnit:
 	u.accessory = data.get("accessory", null)
 	u.trait_ids.assign(data.get("trait_ids", []))
 	u.skill_ids.assign(data.get("skill_ids", []))
+	u.injury_ids.assign(data.get("injury_ids", []))
 
 	# Base Stats
 	u.base_head_armor = data.get("head_armor", 0)
@@ -162,6 +166,8 @@ func recalculate_stats() -> void:
 	_apply_item_bonus(head_armor_item)
 	_apply_item_bonus(body_armor_item)
 	_apply_item_bonus(accessory)
+	for injury_id: String in injury_ids:
+		_apply_injury_penalty(injury_id)
 	max_head_armor = head_armor
 	max_body_armor = body_armor
 
@@ -188,6 +194,22 @@ func _apply_item_bonus(item) -> void:
 	armor_penetration += item.armor_penetration
 	chance_to_hit_head += item.chance_to_hit_head
 	vision += item.vision
+
+
+func _apply_injury_penalty(injury_id: String) -> void:
+	var injury = InjuryRegistryScript.get_injury(injury_id)
+	melee_skill = maxi(
+		0, melee_skill + (injury.stat_modifiers.get("melee_skill", 0) as int)
+	)
+	ranged_skill = maxi(
+		0, ranged_skill + (injury.stat_modifiers.get("ranged_skill", 0) as int)
+	)
+	melee_defense = maxi(
+		0, melee_defense + (injury.stat_modifiers.get("melee_defense", 0) as int)
+	)
+	ranged_defense = maxi(
+		0, ranged_defense + (injury.stat_modifiers.get("ranged_defense", 0) as int)
+	)
 
 
 ## Equip an item to the specified slot
@@ -239,6 +261,24 @@ func get_status_ids() -> Array[String]:
 	for status_id: String in status_turns.keys():
 		if status_turns[status_id] > 0:
 			result.append(status_id)
+	return result
+
+
+func apply_injury(injury_id: String) -> bool:
+	if injury_id in injury_ids:
+		return false
+	injury_ids.append(injury_id)
+	_apply_injury_penalty(injury_id)
+	return true
+
+
+func has_injury(injury_id: String) -> bool:
+	return injury_id in injury_ids
+
+
+func get_injury_ids() -> Array[String]:
+	var result: Array[String] = []
+	result.assign(injury_ids)
 	return result
 
 

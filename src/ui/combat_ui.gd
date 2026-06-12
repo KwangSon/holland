@@ -46,7 +46,7 @@ static func sync_skill_buttons(
 static func format_unit_stats(unit: CombatUnit) -> String:
 	return (
 		"HP %d/%d  머리갑 %d/%d  몸갑 %d/%d  AP %d/%d  피로도 %d/%d\n"
-		+ "탄약 %d/%d  사기 %s(%d)  상태 %s\n"
+		+ "탄약 %d/%d  사기 %s(%d)  상태 %s  부상 %s\n"
 		+ "결의 %d  근공 %d  원공 %d  근방 %d  원방 %d  공격력 %d"
 	) % [
 		unit.hp,
@@ -64,6 +64,7 @@ static func format_unit_stats(unit: CombatUnit) -> String:
 		unit.get_morale_state_name(),
 		unit.morale,
 		_format_status_effects(unit),
+		_format_injuries(unit),
 		unit.resolve,
 		unit.melee_skill,
 		unit.ranged_skill,
@@ -100,6 +101,9 @@ static func format_attack_log(result: Dictionary, defender_name: String) -> Stri
 	)
 	if result.get("killed", false):
 		text += "  [사망]"
+	var injury: Dictionary = result.get("injury", {})
+	if not injury.is_empty():
+		text += "  부상 %s" % injury.get("display_name", injury.get("injury_id", ""))
 	return text
 
 
@@ -215,4 +219,16 @@ static func _format_status_effects(unit: CombatUnit) -> String:
 	for status_id: String in status_ids:
 		var status = CombatStatusEffectRegistry.get_status(status_id)
 		labels.append("%s %d턴" % [status.display_name, unit.status_turns.get(status_id, 0)])
+	return ", ".join(labels)
+
+
+static func _format_injuries(unit: CombatUnit) -> String:
+	var injury_ids := unit.get_injury_ids()
+	if injury_ids.is_empty():
+		return "없음"
+	injury_ids.sort()
+	var labels: Array[String] = []
+	for injury_id: String in injury_ids:
+		var injury = InjuryRegistry.get_injury(injury_id)
+		labels.append(injury.display_name)
 	return ", ".join(labels)
