@@ -46,7 +46,8 @@ static func sync_skill_buttons(
 static func format_unit_stats(unit: CombatUnit) -> String:
 	return (
 		"HP %d/%d  머리갑 %d/%d  몸갑 %d/%d  AP %d/%d  피로도 %d/%d\n"
-		+ "탄약 %d/%d  사기 %s(%d)  결의 %d  근공 %d  원공 %d  근방 %d  원방 %d  공격력 %d"
+		+ "탄약 %d/%d  사기 %s(%d)  상태 %s\n"
+		+ "결의 %d  근공 %d  원공 %d  근방 %d  원방 %d  공격력 %d"
 	) % [
 		unit.hp,
 		unit.max_hp,
@@ -62,6 +63,7 @@ static func format_unit_stats(unit: CombatUnit) -> String:
 		unit.max_ammo,
 		unit.get_morale_state_name(),
 		unit.morale,
+		_format_status_effects(unit),
 		unit.resolve,
 		unit.melee_skill,
 		unit.ranged_skill,
@@ -173,3 +175,15 @@ static func _format_skill_label(skill: CombatSkillData) -> String:
 	if skill.ammo_cost > 0:
 		label += " A%d" % skill.ammo_cost
 	return label
+
+
+static func _format_status_effects(unit: CombatUnit) -> String:
+	var status_ids := unit.get_status_ids()
+	if status_ids.is_empty():
+		return "없음"
+	status_ids.sort()
+	var labels: Array[String] = []
+	for status_id: String in status_ids:
+		var status = CombatStatusEffectRegistry.get_status(status_id)
+		labels.append("%s %d턴" % [status.display_name, unit.status_turns.get(status_id, 0)])
+	return ", ".join(labels)
