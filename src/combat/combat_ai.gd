@@ -5,6 +5,12 @@ static func select_action(active: CombatUnit, state: CombatState) -> Dictionary:
 	if active == null or not active.alive:
 		return {}
 	var board := state.get_board()
+	if active.is_fleeing():
+		return {
+			"move_cell": _select_flee_cell(active, state),
+			"attack_target_id": "",
+			"attack_skill_id": "",
+		}
 	var all_units := state.get_all_units()
 	var attack_skill_ids := _get_attack_skill_ids(active)
 	var current_attack := _select_best_attack(
@@ -38,6 +44,38 @@ static func select_action(active: CombatUnit, state: CombatState) -> Dictionary:
 				"attack_skill_id": attack.get("skill_id", ""),
 			}
 	return best_action
+
+
+static func _select_flee_cell(active: CombatUnit, state: CombatState) -> Vector2i:
+	var legal_moves := state.get_legal_moves(active.id)
+	if legal_moves.is_empty():
+		return active.position
+	var best_cell := active.position
+	var best_distance := _distance_to_board_edge(active.position, state.get_board())
+	for cell: Vector2i in legal_moves:
+		var distance := _distance_to_board_edge(cell, state.get_board())
+		if distance < best_distance or (distance == best_distance and _is_cell_before(cell, best_cell)):
+			best_distance = distance
+			best_cell = cell
+	return best_cell
+
+
+static func _is_cell_before(a: Vector2i, b: Vector2i) -> bool:
+	return a.x < b.x or (a.x == b.x and a.y < b.y)
+
+
+static func _distance_to_board_edge(cell: Vector2i, board: CombatBoard) -> int:
+	var valid_cells := board.get_valid_cells()
+	var min_x := cell.x
+	var max_x := cell.x
+	var min_y := cell.y
+	var max_y := cell.y
+	for valid_cell: Vector2i in valid_cells:
+		min_x = mini(min_x, valid_cell.x)
+		max_x = maxi(max_x, valid_cell.x)
+		min_y = mini(min_y, valid_cell.y)
+		max_y = maxi(max_y, valid_cell.y)
+	return mini(mini(cell.x - min_x, max_x - cell.x), mini(cell.y - min_y, max_y - cell.y))
 
 
 static func _get_attack_skill_ids(unit: CombatUnit) -> Array[String]:

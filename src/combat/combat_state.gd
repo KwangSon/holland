@@ -181,7 +181,7 @@ func attack(
 
 func use_skill(unit_id: String, skill_id: String) -> Dictionary:
 	var unit: CombatUnit = _units.get(unit_id, null)
-	if unit == null or not unit.alive or not _is_active_unit_id(unit_id):
+	if unit == null or not unit.alive or unit.is_fleeing() or not _is_active_unit_id(unit_id):
 		return {}
 	var skill: CombatSkillData = CombatSkillRegistry.get_skill(skill_id)
 	if skill.status_effect_id.is_empty():
@@ -214,6 +214,8 @@ func use_skill(unit_id: String, skill_id: String) -> Dictionary:
 func recover(unit_id: String) -> bool:
 	var unit: CombatUnit = _units.get(unit_id, null)
 	if unit == null or not unit.alive or not _is_active_unit_id(unit_id):
+		return false
+	if unit.is_fleeing():
 		return false
 	if CombatStatusEffectRegistryScript.blocks_actions(unit.get_status_ids()):
 		return false
@@ -265,6 +267,8 @@ func wait_turn() -> void:
 		return
 	var active := get_active_unit()
 	if active == null or active.team != "player":
+		return
+	if active.is_fleeing():
 		return
 	var current_id := _turn_order[_turn_index]
 	if _turn_index >= _turn_order.size() - 1:

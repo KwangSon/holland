@@ -213,6 +213,28 @@ func test_recover_requires_active_unit_and_enough_ap() -> void:
 	assert_false(state.recover("e"))
 	assert_eq(player.fatigue, 0)
 
+	var fleeing := _make_unit(
+		{
+			"id": "f",
+			"team": "player",
+			"initiative": 60,
+			"morale_state": CombatUnit.MoraleState.FLEEING,
+		}
+	)
+	var enemy_for_fleeing := _make_unit(
+		{"id": "ef", "team": "enemy", "position": Vector2i(1, 0), "initiative": 10}
+	)
+	var fleeing_state := _start_state(
+		[fleeing],
+		[enemy_for_fleeing],
+		[Vector2i(0, 0), Vector2i(1, 0), Vector2i(2, 0)]
+	)
+	assert_true(fleeing.is_fleeing())
+	assert_true(fleeing_state.attack("f", "ef").is_empty())
+	assert_false(fleeing_state.recover("f"))
+	fleeing_state.wait_turn()
+	assert_eq(fleeing_state.get_active_unit().id, "f")
+
 
 func test_end_turn_starts_next_unit_with_ap_reset_and_fatigue_recovery() -> void:
 	var player := _make_unit({"id": "p", "team": "player", "initiative": 40})

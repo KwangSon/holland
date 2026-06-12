@@ -596,8 +596,9 @@ func _refresh_ui() -> void:
 	_attack_btn.disabled = not is_player_turn or not _get_selected_movement_skill_id().is_empty()
 	CombatUi.sync_skill_buttons(_skill_buttons, _selected_skill_id, is_player_turn, active)
 
-	if active.is_ai:
-		_unit_name_label.text = active.display_name + " (AI 차례)"
+	if active.is_ai or active.is_fleeing():
+		var active_suffix := " (도망 중)" if active.is_fleeing() else " (AI 차례)"
+		_unit_name_label.text = active.display_name + active_suffix
 		_unit_stats_label.text = CombatUi.format_unit_stats(active)
 		_move_preview_label.text = ""
 		return
@@ -739,7 +740,7 @@ func _start_turn() -> void:
 	if active == null:
 		return
 
-	if active.is_ai:
+	if active.is_ai or active.is_fleeing():
 		_run_ai_turn(active)
 	else:
 		# Player turn - auto-select the active unit

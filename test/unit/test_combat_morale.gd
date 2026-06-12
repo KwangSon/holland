@@ -75,3 +75,18 @@ func test_failed_morale_check_degrades_state() -> void:
 		assert_eq(result.get("previous_state", ""), "steady")
 		assert_eq(result.get("new_state", ""), "wavering")
 		assert_eq(unit.morale_state, CombatUnit.MoraleState.WAVERING)
+
+
+func test_failed_morale_check_from_breaking_becomes_fleeing() -> void:
+	var unit := _make_unit(
+		{"id": "u", "resolve": 0, "morale_state": CombatUnit.MoraleState.BREAKING}
+	)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 1
+
+	var result := CombatRules.roll_morale_check(unit, rng, 100, "ally_death")
+
+	assert_false(result.get("passed", true))
+	assert_eq(result.get("previous_state", ""), "breaking")
+	assert_eq(result.get("new_state", ""), "fleeing")
+	assert_true(unit.is_fleeing())

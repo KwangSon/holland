@@ -2,7 +2,7 @@ class_name CombatUnit
 
 enum UnitType { NONE, PRIEST, ANATOMIST, BOWYER, GOBLIN_AMBUSHER, NECROMANCER }
 
-enum MoraleState { BREAKING, WAVERING, STEADY, CONFIDENT }
+enum MoraleState { FLEEING, BREAKING, WAVERING, STEADY, CONFIDENT }
 
 # === Equipment Slots ===
 var weapon = null
@@ -258,14 +258,20 @@ func get_morale_state_name() -> String:
 			return "wavering"
 		MoraleState.BREAKING:
 			return "breaking"
+		MoraleState.FLEEING:
+			return "fleeing"
 		_:
 			return "steady"
 
 
 func adjust_morale_state(delta: int) -> void:
 	morale_state = (
-		clampi(morale_state + delta, MoraleState.BREAKING, MoraleState.CONFIDENT) as MoraleState
+		clampi(morale_state + delta, MoraleState.FLEEING, MoraleState.CONFIDENT) as MoraleState
 	)
+
+
+func is_fleeing() -> bool:
+	return morale_state == MoraleState.FLEEING
 
 
 func get_current_initiative() -> int:

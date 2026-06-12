@@ -105,3 +105,29 @@ func test_ai_avoids_zoc_escape_when_no_attack_is_available() -> void:
 
 	assert_eq(action.get("move_cell"), Vector2i(0, 0))
 	assert_eq(action.get("attack_target_id"), "")
+
+
+func test_fleeing_ai_moves_toward_board_edge_without_attacking() -> void:
+	var player := _make_unit({"id": "p", "team": "player", "position": Vector2i(4, 2)})
+	var enemy := _make_unit(
+		{
+			"id": "e",
+			"team": "enemy",
+			"position": Vector2i(2, 2),
+			"initiative": 80,
+			"morale_state": CombatUnit.MoraleState.FLEEING,
+		}
+	)
+	var cells: Array[Vector2i] = []
+	for x: int in range(5):
+		for y: int in range(5):
+			cells.append(Vector2i(x, y))
+	var state := _start_state([player], [enemy], cells)
+
+	var action: Dictionary = CombatAiScript.select_action(enemy, state)
+	var move_cell: Vector2i = action.get("move_cell", enemy.position)
+
+	assert_true(enemy.is_fleeing())
+	assert_eq(action.get("attack_target_id"), "")
+	assert_eq(action.get("attack_skill_id"), "")
+	assert_true(move_cell.x == 0 or move_cell.x == 4 or move_cell.y == 0 or move_cell.y == 4)

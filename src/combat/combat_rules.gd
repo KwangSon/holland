@@ -91,6 +91,8 @@ static func get_attack_targets(
 	var attack_skill = _skill_or_basic(skill)
 	if not attacker.alive:
 		return []
+	if attacker.is_fleeing():
+		return []
 	if CombatStatusEffectRegistryScript.blocks_actions(attacker.get_status_ids()):
 		return []
 	if attacker.action_points < attack_skill.action_point_cost:
@@ -110,7 +112,7 @@ static func get_attack_targets(
 
 
 static func get_zoc_cells(unit: CombatUnit, board: CombatBoard) -> Array[Vector2i]:
-	if not unit.alive:
+	if not unit.alive or unit.is_fleeing():
 		return []
 
 	var result: Array[Vector2i] = []
