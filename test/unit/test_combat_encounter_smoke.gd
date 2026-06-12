@@ -20,13 +20,14 @@ func test_registered_encounters_finish_under_turn_cap() -> void:
 		assert_gt(replay.get("events").size(), 0)
 
 
-func test_same_seed_encounter_replays_same_event_flow() -> void:
-	var first := _run_auto_battle(EncounterRegistryScript.BANDIT_SKIRMISH_ID)
-	var second := _run_auto_battle(EncounterRegistryScript.BANDIT_SKIRMISH_ID)
+func test_same_seed_encounters_replay_same_event_flow() -> void:
+	for encounter_id: String in EncounterRegistryScript.get_all_encounter_ids():
+		var first := _run_auto_battle(encounter_id)
+		var second := _run_auto_battle(encounter_id)
 
-	assert_eq(second.get("outcome"), first.get("outcome"))
-	assert_eq(second.get("turns"), first.get("turns"))
-	assert_eq(second.get("events"), first.get("events"))
+		assert_eq(second.get("outcome"), first.get("outcome"), encounter_id)
+		assert_eq(second.get("turns"), first.get("turns"), encounter_id)
+		assert_eq(second.get("events"), first.get("events"), encounter_id)
 
 
 func _run_auto_battle(encounter_id: String) -> Dictionary:
