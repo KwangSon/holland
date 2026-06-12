@@ -1211,7 +1211,7 @@ var ignores_zoc: bool = false
 현재 진행상황:
 
 - 상태: 안정화 진행 중.
-- 자동 검증 기준: `gdlint` 통과, GUT 143개 통과.
+- 자동 검증 기준: `gdlint` 통과, GUT 146개 통과.
 - 코드 기준: M1-M4 완료, M5-M6 알파 최소판 완료, M7 1차 완료.
 - 완료: 자동 조우 smoke 테스트로 산적/언데드/야수 조우가 turn cap 안에서 종료되는지
   검증한다.
@@ -1225,6 +1225,11 @@ var ignores_zoc: bool = false
   표시하도록 포맷 테스트로 고정한다.
 - 완료: 스킬 버튼이 기본 공격/창/둔기/원거리/발놀림/방패벽을 구분하고 원거리 탄약
   부족 시 비활성화되는지 UI 테스트로 고정한다.
+- 완료: 회복 로그와 ZoC 이탈 성공/저지/`footwork` 로그가 핵심 결과 필드를 표시하도록
+  포맷 테스트로 고정한다.
+- 확인: `test/manual/test_combat.tscn`과 `test/manual/test_explore.tscn`은 headless smoke
+  실행에서 종료 코드 0으로 시작/종료된다. 단, `test_combat.tscn`은 종료 시 Godot
+  리소스 leak 경고가 남아 있어 별도 cleanup 후보로 추적한다.
 - 남은 알파 잠금 작업은 구현보다 수동 반복 검증과 문서화가 중심이다.
 
 알파 완료 기준:
@@ -1350,10 +1355,12 @@ var ignores_zoc: bool = false
    확인한다.
 2. 완료: 자동 smoke 테스트에서 산적/언데드/야수 조우 같은 seed 2회 실행의 주요 이벤트
    순서를 비교한다.
-3. `test/manual/test_combat.tscn`에서 산적 조우를 3회 진행하고, 승리/패배/중단 여부와
+3. 확인: `test/manual/test_combat.tscn`은 headless smoke 기준으로 시작/종료된다. 실제
+   산적 조우를 3회 진행하고, 승리/패배/중단 여부와
    이상 로그를 기록한다.
 4. 완료: 자동 테스트에서 Explore 성채/폐허/거미 숲 매핑과 Combat 적 복원을 확인한다.
-5. Explore 화면에서 성채/폐허/거미 숲에 진입해 산적/언데드/야수 조우가 각각 로드되는지
+5. 확인: `test/manual/test_explore.tscn`은 headless smoke 기준으로 시작/종료된다. 실제
+   Explore 화면에서 성채/폐허/거미 숲에 진입해 산적/언데드/야수 조우가 각각 로드되는지
    확인한다.
 6. 수동으로 같은 seed의 같은 조우를 2회 반복해 주요 공격 결과와 로그 순서가 재현되는지
    확인한다.

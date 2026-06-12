@@ -134,6 +134,31 @@ static func format_skill_use(result: Dictionary, unit_name: String) -> String:
 	)
 
 
+static func format_recover_log(unit: CombatUnit) -> String:
+	return "%s 회복  피로도 %d/%d" % [unit.display_name, unit.fatigue, unit.max_fatigue]
+
+
+static func format_zoc_escape_log(
+	unit_name: String, move_result: Dictionary, attacker_name: String
+) -> String:
+	var zoc_attacks: Array = move_result.get("zoc_attacks", [])
+	if move_result.get("blocked_by_zoc", false):
+		var attack: Dictionary = zoc_attacks[-1] if not zoc_attacks.is_empty() else {}
+		return (
+			"%s 이탈 저지 ← %s  명중 %d%%  굴림 %d  HP -%d"
+			% [
+				unit_name,
+				attacker_name,
+				attack.get("hit_chance", 0),
+				attack.get("roll", 0),
+				attack.get("hp_damage", 0),
+			]
+		)
+	if move_result.get("ignored_zoc", false):
+		return "%s 이탈 성공  ZoC 무시" % unit_name
+	return "%s 이탈 성공  %d회 회피" % [unit_name, zoc_attacks.size()]
+
+
 static func format_attack_preview(preview: Dictionary) -> String:
 	var ammo_text := ""
 	if preview["ammo_cost"] > 0:

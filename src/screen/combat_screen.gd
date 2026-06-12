@@ -624,17 +624,7 @@ func _log_move_result(unit: CombatUnit) -> void:
 	var attacker_name: String = (
 		attacker.display_name if attacker != null else attack.get("attacker_id", "")
 	)
-	if move_result.get("blocked_by_zoc", false):
-		_append_log(
-			"%s 이탈 저지 ← %s  HP %d"
-			% [
-				unit.display_name,
-				attacker_name,
-				attack.get("hp_damage", 0),
-			]
-		)
-	else:
-		_append_log("%s 이탈 성공  %d회 회피" % [unit.display_name, zoc_attacks.size()])
+	_append_log(CombatUi.format_zoc_escape_log(unit.display_name, move_result, attacker_name))
 
 
 func _append_log(message: String) -> void:
@@ -694,7 +684,7 @@ func _on_recover_pressed() -> void:
 	var active := _state.get_active_unit()
 	if active == null or not _state.recover(active.id):
 		return
-	_append_log("%s 회복  피로도 %d/%d" % [active.display_name, active.fatigue, active.max_fatigue])
+	_append_log(CombatUi.format_recover_log(active))
 	_deselect()
 
 

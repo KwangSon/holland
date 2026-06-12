@@ -140,6 +140,55 @@ func test_format_attack_preview_includes_damage_costs_and_ammo() -> void:
 	assert_string_contains(text, "탄약 1")
 
 
+func test_format_recover_log_includes_current_fatigue() -> void:
+	var unit := _make_unit({"display_name": "방패병", "max_fatigue": 80})
+	unit.fatigue = 42
+
+	var text := CombatUi.format_recover_log(unit)
+
+	assert_string_contains(text, "방패병 회복")
+	assert_string_contains(text, "피로도 42/80")
+
+
+func test_format_zoc_escape_block_log_includes_hit_roll_and_hp_damage() -> void:
+	var text := CombatUi.format_zoc_escape_log(
+		"궁수",
+		{
+			"blocked_by_zoc": true,
+			"zoc_attacks":
+			[
+				{
+					"hit_chance": 65,
+					"roll": 22,
+					"hp_damage": 5,
+				},
+			],
+		},
+		"산적"
+	)
+
+	assert_string_contains(text, "궁수 이탈 저지 ← 산적")
+	assert_string_contains(text, "명중 65%")
+	assert_string_contains(text, "굴림 22")
+	assert_string_contains(text, "HP -5")
+
+
+func test_format_zoc_escape_success_log_distinguishes_footwork() -> void:
+	var normal_text := CombatUi.format_zoc_escape_log(
+		"검사",
+		{"blocked_by_zoc": false, "zoc_attacks": [{}, {}], "ignored_zoc": false},
+		"산적"
+	)
+	var footwork_text := CombatUi.format_zoc_escape_log(
+		"검사",
+		{"blocked_by_zoc": false, "zoc_attacks": [], "ignored_zoc": true},
+		"산적"
+	)
+
+	assert_string_contains(normal_text, "검사 이탈 성공  2회 회피")
+	assert_string_contains(footwork_text, "검사 이탈 성공  ZoC 무시")
+
+
 func test_add_skill_bar_labels_attack_utility_and_ranged_skills() -> void:
 	var parent := autofree(VBoxContainer.new()) as VBoxContainer
 	var buttons := CombatUi.add_skill_bar(parent, _on_test_skill_pressed)
