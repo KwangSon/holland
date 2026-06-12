@@ -1227,9 +1227,9 @@ var ignores_zoc: bool = false
   부족 시 비활성화되는지 UI 테스트로 고정한다.
 - 완료: 회복 로그와 ZoC 이탈 성공/저지/`footwork` 로그가 핵심 결과 필드를 표시하도록
   포맷 테스트로 고정한다.
-- 확인: `test/manual/test_combat.tscn`과 `test/manual/test_explore.tscn`은 headless smoke
-  실행에서 종료 코드 0으로 시작/종료된다. 단, `test_combat.tscn`은 종료 시 Godot
-  리소스 leak 경고가 남아 있어 별도 cleanup 후보로 추적한다.
+- 완료: `test/manual/test_combat.tscn`과 `test/manual/test_explore.tscn`은 headless smoke
+  실행에서 종료 코드 0으로 시작/종료되며, 수동 전투 씬의 AI 연출 timer shutdown 경고도
+  정리했다.
 - 남은 알파 잠금 작업은 구현보다 수동 반복 검증과 문서화가 중심이다.
 
 알파 완료 기준:

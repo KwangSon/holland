@@ -10,6 +10,7 @@ const EMPTY_TILE := -1
 const MAP_ORIGIN := Vector2(96, 72)
 ## Drawing radius for hex highlights (between tile inradius 12 and circumradius 16).
 const HEX_RADIUS := 14.0
+const AI_TURN_DELAY_SECONDS := 0.5
 
 const TEST_MAP := [
 	[-1, -1, 2, 2, 2, 2, 2, -1, -1],
@@ -67,6 +68,10 @@ func _ready() -> void:
 	_setup_ui()
 	_setup_camera()
 	_start_turn()
+
+
+func cleanup() -> void:
+	_attack_mode = false
 
 
 func initialize(_data: Dictionary) -> void:
@@ -751,7 +756,7 @@ func _run_ai_turn(active: CombatUnit) -> void:
 	_refresh_ui()
 
 	# 대기시간으로 AI 턴임을 알림
-	await get_tree().create_timer(0.5).timeout
+	await _wait_ai_delay()
 
 	if _state.get_outcome() != "ongoing" or not active.alive:
 		return
@@ -772,7 +777,7 @@ func _run_ai_turn(active: CombatUnit) -> void:
 			_log_move_result(active)
 			_refresh_overlays()
 			_refresh_ui()
-		await get_tree().create_timer(0.5).timeout
+		await _wait_ai_delay()
 
 	if _state.get_outcome() != "ongoing" or not active.alive:
 		return
@@ -784,7 +789,7 @@ func _run_ai_turn(active: CombatUnit) -> void:
 		_log_attack(result, target_id)
 		_refresh_overlays()
 		_refresh_ui()
-		await get_tree().create_timer(0.5).timeout
+		await _wait_ai_delay()
 
 	_check_outcome()
 	if _state.get_outcome() == "ongoing":
@@ -800,6 +805,12 @@ func _rebuild_queue(queue: Array[CombatUnit]) -> void:
 		var lbl := Label.new()
 		lbl.text = ("▶ " if i == 0 else "") + queue[i].display_name
 		_queue_container.add_child(lbl)
+
+
+func _wait_ai_delay() -> void:
+	if DisplayServer.get_name() == "headless":
+		return
+	await get_tree().create_timer(AI_TURN_DELAY_SECONDS).timeout
 
 
 func _count_alive(team: String) -> int:
