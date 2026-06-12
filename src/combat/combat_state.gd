@@ -118,6 +118,9 @@ func move_unit(unit_id: String, target: Vector2i, movement_skill_id: String = ""
 		"blocked_by_zoc": false,
 		"ignored_zoc": ignores_zoc,
 		"movement_skill_id": movement_skill_id,
+		"escaped": false,
+		"escaped_unit_id": "",
+		"escaped_team": "",
 	}
 	var unit: CombatUnit = _units.get(unit_id, null)
 	if unit == null or not unit.alive or not _is_active_unit_id(unit_id):
@@ -150,6 +153,12 @@ func move_unit(unit_id: String, target: Vector2i, movement_skill_id: String = ""
 	_last_move_result["moved"] = true
 	_last_move_result["ap_cost"] = ap_cost
 	_last_move_result["fatigue_cost"] = fatigue_cost
+	if unit.is_fleeing() and _is_board_edge_cell(target):
+		_last_move_result["escaped"] = true
+		_last_move_result["escaped_unit_id"] = unit.id
+		_last_move_result["escaped_team"] = unit.team
+		unit.escaped = true
+		_remove_unit_from_battle(unit_id)
 	return true
 
 
@@ -393,7 +402,26 @@ func _create_move_result(movement_skill_id: String, ignored_zoc: bool) -> Dictio
 		"blocked_by_zoc": false,
 		"ignored_zoc": ignored_zoc,
 		"movement_skill_id": movement_skill_id,
+		"escaped": false,
+		"escaped_unit_id": "",
+		"escaped_team": "",
 	}
+
+
+func _is_board_edge_cell(cell: Vector2i) -> bool:
+	if not _board.is_valid(cell):
+		return false
+	var valid_cells := _board.get_valid_cells()
+	var min_x := cell.x
+	var max_x := cell.x
+	var min_y := cell.y
+	var max_y := cell.y
+	for valid_cell: Vector2i in valid_cells:
+		min_x = mini(min_x, valid_cell.x)
+		max_x = maxi(max_x, valid_cell.x)
+		min_y = mini(min_y, valid_cell.y)
+		max_y = maxi(max_y, valid_cell.y)
+	return cell.x == min_x or cell.x == max_x or cell.y == min_y or cell.y == max_y
 
 
 func _resolve_zoc_escape_attacks(unit: CombatUnit, path: Array[Vector2i]) -> Dictionary:
@@ -446,14 +474,38 @@ func _remove_dead_unit(unit_id: String) -> void:
 	var unit: CombatUnit = _units.get(unit_id, null)
 	if unit != null:
 		_board.clear_occupied(unit.position)
-	var dead_idx := _turn_order.find(unit_id)
-	_turn_order.erase(unit_id)
-	if dead_idx != -1 and dead_idx < _turn_index:
+	_remove_unit_from_turn_order(unit_id)
+
+
+func _remove_unit_from_battle(unit_id: String) -> void:
+	var unit: CombatUnit = _units.get(unit_id, null)
+	if unit != null:
+		_board.clear_occupied(unit.position)
+	_units.erase(unit_id)
+	_remove_unit_from_turn_order(unit_id)
+
+
+func _remove_unit_from_turn_order(unit_id: String) -> void:
+	var removed_idx := _turn_order.find(unit_id)
+	if removed_idx == -1:
+		return
+	var removed_current := removed_idx == _turn_index
+	_turn_order.remove_at(removed_idx)
+	if _turn_order.is_empty():
+		_turn_index = 0
+		return
+	if removed_idx < _turn_index:
 		_turn_index -= 1
-	elif dead_idx == _turn_index and _turn_index >= _turn_order.size():
+	elif removed_current and _turn_index >= _turn_order.size():
+		round_number += 1
+		_build_turn_order(_get_living_units())
 		_turn_index = 0
 	if not _turn_order.is_empty():
 		_turn_index = _turn_index % _turn_order.size()
+	if removed_current:
+		var active := get_active_unit()
+		if active != null:
+			_start_unit_turn(active, CombatRules.TURN_FATIGUE_RECOVERY)
 
 
 func _get_active_ref() -> CombatUnit:

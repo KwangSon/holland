@@ -623,14 +623,15 @@ func _log_attack(result: Dictionary, defender_id: String) -> void:
 func _log_move_result(unit: CombatUnit) -> void:
 	var move_result := _state.get_last_move_result()
 	var zoc_attacks: Array = move_result.get("zoc_attacks", [])
-	if zoc_attacks.is_empty():
-		return
-	var attack: Dictionary = zoc_attacks[-1]
-	var attacker := _find_unit(attack.get("attacker_id", ""))
-	var attacker_name: String = (
-		attacker.display_name if attacker != null else attack.get("attacker_id", "")
-	)
-	_append_log(CombatUi.format_zoc_escape_log(unit.display_name, move_result, attacker_name))
+	if not zoc_attacks.is_empty():
+		var attack: Dictionary = zoc_attacks[-1]
+		var attacker := _find_unit(attack.get("attacker_id", ""))
+		var attacker_name: String = (
+			attacker.display_name if attacker != null else attack.get("attacker_id", "")
+		)
+		_append_log(CombatUi.format_zoc_escape_log(unit.display_name, move_result, attacker_name))
+	if move_result.get("escaped", false):
+		_append_log(CombatUi.format_flee_escape_log(unit.display_name))
 
 
 func _append_log(message: String) -> void:
@@ -779,6 +780,11 @@ func _run_ai_turn(active: CombatUnit) -> void:
 			_refresh_overlays()
 			_refresh_ui()
 		await _wait_ai_delay()
+		if _state.get_last_move_result().get("escaped", false):
+			_check_outcome()
+			if _state.get_outcome() == "ongoing":
+				_deselect()
+			return
 
 	if _state.get_outcome() != "ongoing" or not active.alive:
 		return

@@ -235,6 +235,48 @@ func test_recover_requires_active_unit_and_enough_ap() -> void:
 	fleeing_state.wait_turn()
 	assert_eq(fleeing_state.get_active_unit().id, "f")
 
+	var escaping := _make_unit(
+		{
+			"id": "esc",
+			"team": "player",
+			"position": Vector2i(1, 1),
+			"initiative": 60,
+			"morale_state": CombatUnit.MoraleState.FLEEING,
+		}
+	)
+	var escape_enemy := _make_unit(
+		{
+			"id": "ee",
+			"team": "enemy",
+			"position": Vector2i(2, 0),
+			"initiative": 10,
+			"action_points": 1,
+			"fatigue": 20,
+		}
+	)
+	var escape_cells: Array[Vector2i] = []
+	for x: int in range(3):
+		for y: int in range(3):
+			escape_cells.append(Vector2i(x, y))
+	var escape_state := _start_state(
+		[escaping],
+		[escape_enemy],
+		escape_cells
+	)
+
+	assert_true(escape_state.move_unit("esc", Vector2i(0, 1)))
+	assert_true(escaping.escaped)
+	assert_true(escape_state.get_last_move_result().get("escaped", false))
+	assert_eq(escape_state.get_last_move_result().get("escaped_unit_id", ""), "esc")
+	assert_false(escape_state.get_board().occupied.has(Vector2i(0, 1)))
+	var remaining_ids := escape_state.get_remaining_turn_queue().map(
+		func(unit: CombatUnit) -> String: return unit.id
+	)
+	assert_eq(remaining_ids, ["ee"])
+	assert_eq(escape_state.get_outcome(), "defeat")
+	assert_eq(escape_enemy.action_points, 9)
+	assert_eq(escape_enemy.fatigue, 5)
+
 
 func test_end_turn_starts_next_unit_with_ap_reset_and_fatigue_recovery() -> void:
 	var player := _make_unit({"id": "p", "team": "player", "initiative": 40})

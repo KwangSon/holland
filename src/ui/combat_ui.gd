@@ -138,6 +138,10 @@ static func format_recover_log(unit: CombatUnit) -> String:
 	return "%s 회복  피로도 %d/%d" % [unit.display_name, unit.fatigue, unit.max_fatigue]
 
 
+static func format_flee_escape_log(unit_name: String) -> String:
+	return "%s 전장 이탈" % unit_name
+
+
 static func format_zoc_escape_log(
 	unit_name: String, move_result: Dictionary, attacker_name: String
 ) -> String:

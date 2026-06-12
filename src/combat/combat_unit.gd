@@ -74,6 +74,7 @@ var is_ai: bool = false
 var position: Vector2i = Vector2i.ZERO
 var visual_position: Vector2 = Vector2.ZERO
 var alive: bool = true
+var escaped: bool = false
 var has_acted: bool = false
 var status_turns: Dictionary = {}
 var morale_state: MoraleState = MoraleState.STEADY

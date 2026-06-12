@@ -150,6 +150,12 @@ func test_format_recover_log_includes_current_fatigue() -> void:
 	assert_string_contains(text, "피로도 42/80")
 
 
+func test_format_flee_escape_log_names_unit() -> void:
+	var text := CombatUi.format_flee_escape_log("궁수")
+
+	assert_string_contains(text, "궁수 전장 이탈")
+
+
 func test_format_zoc_escape_block_log_includes_hit_roll_and_hp_damage() -> void:
 	var text := CombatUi.format_zoc_escape_log(
 		"궁수",
