@@ -138,3 +138,36 @@ func test_format_attack_preview_includes_damage_costs_and_ammo() -> void:
 	assert_string_contains(text, "AP 5")
 	assert_string_contains(text, "피로도 +20")
 	assert_string_contains(text, "탄약 1")
+
+
+func test_add_skill_bar_labels_attack_utility_and_ranged_skills() -> void:
+	var parent := autofree(VBoxContainer.new()) as VBoxContainer
+	var buttons := CombatUi.add_skill_bar(parent, _on_test_skill_pressed)
+
+	assert_true(CombatSkillRegistry.BASIC_ATTACK_ID in buttons)
+	assert_true(CombatSkillRegistry.SPEAR_THRUST_ID in buttons)
+	assert_true(CombatSkillRegistry.MACE_STRIKE_ID in buttons)
+	assert_true(CombatSkillRegistry.RANGED_SHOT_ID in buttons)
+	assert_true(CombatSkillRegistry.FOOTWORK_ID in buttons)
+	assert_true(CombatSkillRegistry.SHIELDWALL_ID in buttons)
+	assert_string_contains(buttons[CombatSkillRegistry.BASIC_ATTACK_ID].text, "기본 공격")
+	assert_string_contains(buttons[CombatSkillRegistry.SPEAR_THRUST_ID].text, "창 찌르기")
+	assert_string_contains(buttons[CombatSkillRegistry.MACE_STRIKE_ID].text, "둔기 타격")
+	assert_string_contains(buttons[CombatSkillRegistry.RANGED_SHOT_ID].text, "원거리 사격")
+	assert_string_contains(buttons[CombatSkillRegistry.RANGED_SHOT_ID].text, "A1")
+
+
+func test_sync_skill_buttons_disables_unpayable_ranged_ammo_cost() -> void:
+	var parent := autofree(VBoxContainer.new()) as VBoxContainer
+	var buttons := CombatUi.add_skill_bar(parent, _on_test_skill_pressed)
+	var unit := _make_unit({"ammo": 0, "max_ammo": 0})
+
+	CombatUi.sync_skill_buttons(buttons, CombatSkillRegistry.BASIC_ATTACK_ID, true, unit)
+
+	assert_false(buttons[CombatSkillRegistry.BASIC_ATTACK_ID].disabled)
+	assert_true(buttons[CombatSkillRegistry.RANGED_SHOT_ID].disabled)
+	assert_true(buttons[CombatSkillRegistry.BASIC_ATTACK_ID].button_pressed)
+
+
+func _on_test_skill_pressed(_skill_id: String) -> void:
+	pass
